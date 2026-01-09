@@ -4,6 +4,8 @@
 
 Start a task, walk away. Your computer speaks when Claude is done, stuck, or needs a decision. Have natural voice conversations with Claude using local audio.
 
+<img src="./static/taxi-driver.jpg" width="800" alt="TalkToMe - Voice conversations with Claude">
+
 - **Zero cost** - No phone charges, no API costs for communication (only optional OpenAI for better quality)
 - **Privacy-first** - All audio processing can happen locally on your machine
 - **Multi-turn conversations** - Talk through decisions naturally
