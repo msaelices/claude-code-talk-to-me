@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""TalkToMe MCP Server - Local audio communication for Claude."""
+
+import asyncio
+import logging
+import os
+import sys
+from typing import Any, Dict, Optional
+from dotenv import load_dotenv
+
+from mcp.server.fastmcp import FastMCP
+from mcp import Tool
+
+from .call_manager import CallManager
+from .providers import (
+    LocalPhoneProvider,
+    WhisperSTTProvider,
+    PiperTTSProvider
+)
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging (stderr only for stdio-based MCP)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stderr)]  # IMPORTANT: Use stderr for logging
+)
+logger = logging.getLogger(__name__)
+
+# Initialize MCP server
+mcp = FastMCP("talktome")
+
+# Global call manager instance
+call_manager: Optional[CallManager] = None
+
+
+def init_call_manager():
+    """Initialize the call manager with configured providers."""
+    global call_manager
+
+    # Get provider configuration from environment
+    tts_provider_name = os.getenv('TALKTOME_TTS_PROVIDER', 'piper')
+    stt_provider_name = os.getenv('TALKTOME_STT_PROVIDER', 'whisper')
+
+    # Initialize providers based on configuration
+    phone_provider = LocalPhoneProvider()
+
+    # TTS Provider
+    if tts_provider_name == 'piper':
+        tts_provider = PiperTTSProvider()
+    else:
+        # Default to Piper if unknown
+        logger.warning(f"Unknown TTS provider: {tts_provider_name}, using Piper")
+        tts_provider = PiperTTSProvider()
+
+    # STT Provider
+    if stt_provider_name == 'whisper':
+        stt_provider = WhisperSTTProvider()
+    else:
+        # Default to Whisper if unknown
+        logger.warning(f"Unknown STT provider: {stt_provider_name}, using Whisper")
+        stt_provider = WhisperSTTProvider()
+
+    # Create call manager
+    call_manager = CallManager(
+        phone_provider=phone_provider,
+        tts_provider=tts_provider,
+        stt_provider=stt_provider
+    )
+
+    logger.info("Call manager initialized successfully")
+
+
+# Initialize on startup
+init_call_manager()
+
+
+# Tool definitions
+@mcp.tool(
+    name="initiate_call",
+    description="Start a local audio communication session using the computer's microphone and speakers"
+)
+async def initiate_call() -> Dict[str, Any]:
+    """
+    Start a local audio session for voice communication.
+
+    Returns:
+        Dict with success status and call details
+    """
+    if not call_manager:
+        return {
+            'success': False,
+            'error': 'Call manager not initialized'
+        }
+
+    result = await call_manager.initiate_call("local")
+    return result
+
+
+@mcp.tool(
+    name="speak",
+    description="Convert text to speech and play it through the speakers"
+)
+async def speak(text: str) -> Dict[str, Any]:
+    """
+    Speak text through the active audio session.
+
+    Args:
+        text: Text to speak
+
+    Returns:
+        Dict with success status
+    """
+    if not call_manager:
+        return {
+            'success': False,
+            'error': 'Call manager not initialized'
+        }
+
+    if not text:
+        return {
+            'success': False,
+            'error': 'Text parameter is required'
+        }
+
+    result = await call_manager.speak(text)
+    return result
+
+
+@mcp.tool(
+    name="get_transcript",
+    description="Get the transcript of the current or last audio session"
+)
+async def get_transcript() -> Dict[str, Any]:
+    """
+    Get the conversation transcript.
+
+    Returns:
+        Dict with transcript data
+    """
+    if not call_manager:
+        return {
+            'success': False,
+            'error': 'Call manager not initialized'
+        }
+
+    result = await call_manager.get_transcript()
+    return result
+
+
+@mcp.tool(
+    name="end_call",
+    description="End the current audio communication session"
+)
+async def end_call() -> Dict[str, Any]:
+    """
+    End the active audio session.
+
+    Returns:
+        Dict with call summary
+    """
+    if not call_manager:
+        return {
+            'success': False,
+            'error': 'Call manager not initialized'
+        }
+
+    result = await call_manager.end_call()
+    return result
+
+
+@mcp.tool(
+    name="test_audio",
+    description="Test the audio system setup (microphone, speakers, TTS, STT)"
+)
+async def test_audio() -> Dict[str, Any]:
+    """
+    Test audio system components.
+
+    Returns:
+        Dict with test results
+    """
+    results = {
+        'microphone': False,
+        'speakers': False,
+        'tts': False,
+        'stt': False
+    }
+
+    try:
+        # Test microphone
+        import sounddevice as sd
+        devices = sd.query_devices()
+        input_devices = [d for d in devices if d['max_input_channels'] > 0]
+        results['microphone'] = len(input_devices) > 0
+
+        # Test speakers
+        output_devices = [d for d in devices if d['max_output_channels'] > 0]
+        results['speakers'] = len(output_devices) > 0
+
+        # Test TTS
+        if call_manager and call_manager.tts_provider:
+            test_audio = await call_manager.tts_provider.synthesize("Test")
+            results['tts'] = len(test_audio) > 0
+
+        # Test STT (check if model loads)
+        if call_manager and call_manager.stt_provider:
+            results['stt'] = hasattr(call_manager.stt_provider, 'model')
+
+    except Exception as e:
+        logger.error(f"Audio test error: {e}")
+
+    return {
+        'success': all(results.values()),
+        'results': results
+    }
+
+
+async def cleanup():
+    """Clean up resources on shutdown."""
+    if call_manager:
+        await call_manager.cleanup()
+    logger.info("Server shutdown complete")
+
+
+def main():
+    """Main entry point for the MCP server."""
+    logger.info("Starting TalkToMe MCP Server v2.0.0")
+
+    # Print initialization message to stderr
+    print("TalkToMe Local Audio Communication", file=sys.stderr)
+    print("================================", file=sys.stderr)
+    print("Ready for voice communication!", file=sys.stderr)
+    print("", file=sys.stderr)
+
+    try:
+        # Run the MCP server
+        mcp.run()
+    except KeyboardInterrupt:
+        logger.info("Server interrupted by user")
+    except Exception as e:
+        logger.error(f"Server error: {e}")
+        sys.exit(1)
+    finally:
+        # Clean up
+        asyncio.run(cleanup())
+
+
+if __name__ == "__main__":
+    main()

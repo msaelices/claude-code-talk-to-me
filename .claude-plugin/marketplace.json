@@ -1,0 +1,12 @@
+{
+  "name": "talktome",
+  "owner": {
+    "name": "TalkToMe Contributors"
+  },
+  "plugins": [
+    {
+      "name": "talktome",
+      "source": "./"
+    }
+  ]
+}

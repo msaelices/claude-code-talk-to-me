@@ -1,0 +1,45 @@
+{
+  "name": "talktome",
+  "version": "2.0.0",
+  "description": "Claude communicates with you through your computer's microphone and speakers for real-time voice conversations",
+  "author": {
+    "name": "TalkToMe Contributors",
+    "url": "https://github.com/msaelices/claude-code-talk-to-me"
+  },
+  "repository": "https://github.com/msaelices/claude-code-talk-to-me",
+  "license": "MIT",
+  "keywords": ["voice", "audio", "microphone", "speech", "local", "tts", "stt"],
+  "skills": "./skills",
+  "mcpServers": {
+    "talktome": {
+      "command": "bash",
+      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT}/server && python3 -m talktome_mcp.server"],
+      "env": {
+        "TALKTOME_AUDIO_SYSTEM": "${TALKTOME_AUDIO_SYSTEM:-pulseaudio}",
+        "TALKTOME_TTS_PROVIDER": "${TALKTOME_TTS_PROVIDER:-piper}",
+        "TALKTOME_STT_PROVIDER": "${TALKTOME_STT_PROVIDER:-whisper}",
+        "TALKTOME_PIPER_MODEL_PATH": "${TALKTOME_PIPER_MODEL_PATH:-models/piper/en_US-amy-medium.onnx}",
+        "TALKTOME_WHISPER_MODEL": "${TALKTOME_WHISPER_MODEL:-base}",
+        "TALKTOME_WHISPER_DEVICE": "${TALKTOME_WHISPER_DEVICE:-auto}",
+        "TALKTOME_WHISPER_COMPUTE_TYPE": "${TALKTOME_WHISPER_COMPUTE_TYPE:-auto}",
+        "TALKTOME_OPENAI_API_KEY": "${TALKTOME_OPENAI_API_KEY}",
+        "TALKTOME_TTS_VOICE": "${TALKTOME_TTS_VOICE:-onyx}",
+        "TALKTOME_STT_MODEL": "${TALKTOME_STT_MODEL:-gpt-4o-transcribe}",
+        "TALKTOME_PORT": "${TALKTOME_PORT:-3000}",
+        "TALKTOME_STT_SILENCE_DURATION_MS": "${TALKTOME_STT_SILENCE_DURATION_MS:-800}"
+      }
+    }
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Evaluate if Claude should speak to the user to report progress or ask for what to do next. If yes, use the initiate_call tool."
+          }
+        ]
+      }
+    ]
+  }
+}
