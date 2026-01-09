@@ -361,3 +361,9 @@ To add new TTS/STT providers:
 ## License
 
 MIT
+
+---
+
+## Acknowledgments
+
+This project was inspired by [call-me](https://github.com/ZeframLou/call-me/) by ZeframLou, but instead of phone calls in TS this is local voice tools in Python.
