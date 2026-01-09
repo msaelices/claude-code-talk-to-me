@@ -87,7 +87,7 @@ This will:
 
 ```bash
 # Copy the example configuration
-cp .env.local.example .env.local
+cp .env.example .env.local
 
 # Edit with your preferences (or use defaults)
 nano .env.local
@@ -333,7 +333,7 @@ To add new TTS/STT providers:
 1. Create provider in `server/talktome_mcp/providers/`
 2. Implement the provider interface in `providers/base.py`
 3. Update `providers/__init__.py`
-4. Add configuration to `.env.local.example`
+4. Add configuration to `.env.example`
 
 ---
 

@@ -31,7 +31,7 @@ python3 test-audio.py
 ```
 
 ### Environment Configuration
-Copy `.env.local.example` to `.env.local` and configure:
+Copy `.env.example` to `.env.local` and configure:
 - Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
 - TTS provider (TALKTOME_TTS_PROVIDER: piper or openai)
 - STT provider (TALKTOME_STT_PROVIDER: whisper or openai)
