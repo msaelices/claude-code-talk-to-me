@@ -31,9 +31,10 @@ class PiperTTSProvider(TTSProvider):
         # If relative path and doesn't exist, try resolving from project root
         if not self.model_path.is_absolute() and not self.model_path.exists():
             # Get the directory containing this file (server/talktome_mcp/providers/)
-            # and go up to project root
+            # and go up to project root (need to go up 3 levels: providers/ -> talktome_mcp/ -> server/ -> project_root/)
             providers_dir = Path(__file__).parent
-            server_dir = providers_dir.parent
+            talktome_mcp_dir = providers_dir.parent
+            server_dir = talktome_mcp_dir.parent
             project_root = server_dir.parent
             alternative_path = project_root / self.model_path
 
@@ -51,7 +52,7 @@ class PiperTTSProvider(TTSProvider):
             logger.warning(f"Piper model not found at {self.model_path}")
             logger.warning("Please run: python3 download-models.py")
 
-        # Convert to absolute path for subprocess
+        # Convert to absolute path for subprocess AFTER path resolution
         self.model_path = self.model_path.resolve()
 
         logger.info(f"Using Piper model: {self.model_path}")

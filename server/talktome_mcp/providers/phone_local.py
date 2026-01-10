@@ -59,7 +59,7 @@ class LocalCall(Call):
         """Start playback thread for audio output."""
         def playback_worker():
             with sd.OutputStream(
-                samplerate=24000,  # Standard TTS output rate
+                samplerate=22050,  # Piper TTS outputs at 22050Hz
                 channels=1,
                 dtype='int16'
             ) as stream:
