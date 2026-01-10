@@ -136,6 +136,9 @@ class CallManager:
                 audio = await self.tts_provider.synthesize(text)
                 await self.phone_provider.send_audio(self.active_call_id, audio)
 
+            # Wait for playback to complete before resuming recording
+            await self.phone_provider.wait_for_playback_complete(self.active_call_id)
+
             # Resume recording after speech completes
             await self.phone_provider.resume_recording(self.active_call_id)
 

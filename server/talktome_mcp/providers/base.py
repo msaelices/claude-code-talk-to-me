@@ -32,6 +32,10 @@ class PhoneProvider(ABC):
         """Send audio data to the call."""
         pass
 
+    async def wait_for_playback_complete(self, call_id: str, timeout: float = 10.0) -> None:
+        """Wait for all queued audio to finish playing. Default implementation does nothing."""
+        pass
+
     @abstractmethod
     async def pause_recording(self, call_id: str) -> None:
         """Pause recording to prevent audio feedback during TTS playback."""

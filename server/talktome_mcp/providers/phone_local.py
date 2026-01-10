@@ -22,6 +22,9 @@ class LocalCall(Call):
         self.audio_queue = asyncio.Queue()
         self.recording = True
         self.playback_queue = Queue()
+        self.playback_in_flight = 0  # Track audio chunks currently being played
+        self.playback_done_event = threading.Event()  # Signal when playback is complete
+        self.playback_done_event.set()  # Initially set (no audio playing)
         self.record_thread: Optional[threading.Thread] = None
         self.playback_thread: Optional[threading.Thread] = None
         self.event_loop = event_loop or asyncio.get_event_loop()
@@ -78,9 +81,16 @@ class LocalCall(Call):
                         if audio is None:
                             logger.info(f"[{self.call_id}] Playback thread received None, stopping")
                             break
+
+                        # Signal that audio is playing
+                        self.playback_done_event.clear()
+
                         # Convert bytes to numpy array
                         samples = np.frombuffer(audio, dtype=np.int16)
                         stream.write(samples)
+
+                        # Signal that playback is done
+                        self.playback_done_event.set()
                     except:
                         continue
             logger.info(f"[{self.call_id}] Playback thread ended")
@@ -91,6 +101,16 @@ class LocalCall(Call):
     async def play_audio(self, audio: bytes):
         """Queue audio for playback."""
         self.playback_queue.put(audio)
+
+    async def wait_for_playback_complete(self, timeout: float = 10.0):
+        """Wait for all queued audio to finish playing."""
+        # Wait for the queue to be empty and playback to complete
+        start_time = asyncio.get_event_loop().time()
+        while asyncio.get_event_loop().time() - start_time < timeout:
+            if self.playback_queue.empty() and self.playback_done_event.is_set():
+                return
+            await asyncio.sleep(0.05)
+        logger.warning(f"[{self.call_id}] Timeout waiting for playback to complete")
 
     async def end(self):
         """End the local call."""
@@ -152,6 +172,11 @@ class LocalPhoneProvider(PhoneProvider):
         if call_id in self.calls:
             call = self.calls[call_id]
             await call.play_audio(audio)
+
+    async def wait_for_playback_complete(self, call_id: str, timeout: float = 10.0) -> None:
+        """Wait for all queued audio to finish playing."""
+        if call_id in self.calls:
+            await self.calls[call_id].wait_for_playback_complete(timeout)
 
     async def pause_recording(self, call_id: str) -> None:
         """Pause recording to prevent audio feedback during TTS playback."""
