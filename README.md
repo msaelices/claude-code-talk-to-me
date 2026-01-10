@@ -49,7 +49,6 @@ git clone https://github.com/msaelices/claude-code-talk-to-me.git
 cd claude-code-talk-to-me
 
 # Run the installation script
-chmod +x install-prerequisites.sh
 ./install-prerequisites.sh
 ```
 
