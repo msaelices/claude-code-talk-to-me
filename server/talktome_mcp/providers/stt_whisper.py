@@ -32,6 +32,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
                                              int(os.getenv('TALKTOME_STT_SILENCE_DURATION_MS', '800')))
         self.vad_threshold = config.get('vad_threshold',
                                         float(os.getenv('TALKTOME_STT_VAD_THRESHOLD', '0.5')))
+        self.transcription_cooldown_ms = config.get('transcription_cooldown_ms', 1000)  # 1 second cooldown
 
         # Auto-detect device if needed
         if self.device == 'auto':
@@ -67,6 +68,8 @@ class WhisperSTTProvider(RealtimeSTTProvider):
         self.streaming = False
         self.silence_samples = 0
         self.silence_threshold = int(self.silence_duration_ms * self.sample_rate / 1000)
+        self.last_transcription_samples = 0  # Track samples since last transcription
+        self.transcription_cooldown_samples = int(self.transcription_cooldown_ms * self.sample_rate / 1000)
 
     def _init_vad(self):
         """Initialize Silero VAD model."""
@@ -105,6 +108,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
         self.streaming = True
         self.audio_buffer = bytearray()
         self.silence_samples = 0
+        self.last_transcription_samples = 0
         logger.info("Started Whisper streaming")
 
     async def stop_stream(self) -> None:
@@ -123,6 +127,14 @@ class WhisperSTTProvider(RealtimeSTTProvider):
             Transcribed text when sentence completes, None otherwise
         """
         if not self.streaming:
+            return None
+
+        # Track samples since last transcription (for cooldown)
+        audio_samples = len(audio) // 2  # 16-bit samples
+        self.last_transcription_samples += audio_samples
+
+        # Check if we're in cooldown period after a transcription
+        if self.last_transcription_samples < self.transcription_cooldown_samples:
             return None
 
         # Add to buffer
@@ -155,7 +167,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
             if has_speech:
                 self.silence_samples = 0
             else:
-                self.silence_samples += len(audio) // 2  # 16-bit samples
+                self.silence_samples += audio_samples
 
         else:
             # Simple amplitude-based detection
@@ -163,7 +175,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
             max_amplitude = np.max(np.abs(audio_array))
 
             if max_amplitude < 500:  # Threshold for silence
-                self.silence_samples += len(audio) // 2
+                self.silence_samples += audio_samples
             else:
                 self.silence_samples = 0
 
@@ -172,12 +184,14 @@ class WhisperSTTProvider(RealtimeSTTProvider):
             # Process buffered audio
             result = await self.transcribe(bytes(self.audio_buffer))
 
-            # Clear buffer
+            # Clear buffer and reset silence counter
             self.audio_buffer = bytearray()
             self.silence_samples = 0
 
             if result.strip():
                 logger.info(f"Transcribed: {result}")
+                # Enter cooldown period after successful transcription
+                self.last_transcription_samples = 0
                 return result
 
         return None
