@@ -55,7 +55,17 @@ def init_call_manager():
 
     # TTS Provider
     if tts_provider_name == 'piper':
-        tts_provider = PiperTTSProvider()
+        # Get TTS configuration
+        tts_config = {}
+        speed_str = os.getenv('TALKTOME_PIPER_SPEED')
+        if speed_str:
+            try:
+                tts_config['length_scale'] = float(speed_str)
+                logger.info(f"Piper TTS speed set to {speed_str}")
+            except ValueError:
+                logger.warning(f"Invalid TALKTOME_PIPER_SPEED value: {speed_str}, using default")
+
+        tts_provider = PiperTTSProvider(config=tts_config)
     else:
         # Default to Piper if unknown
         logger.warning(f"Unknown TTS provider: {tts_provider_name}, using Piper")

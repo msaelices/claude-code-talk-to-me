@@ -100,6 +100,9 @@ TALKTOME_AUDIO_SYSTEM=pulseaudio
 # TTS provider (piper for local, openai for cloud)
 TALKTOME_TTS_PROVIDER=piper
 
+# Speaking speed (0.5 = very fast, 1.0 = normal, 1.5 = slow)
+TALKTOME_PIPER_SPEED=0.85
+
 # STT provider (whisper for local, openai for cloud)
 TALKTOME_STT_PROVIDER=whisper
 
