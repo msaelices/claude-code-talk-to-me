@@ -5,6 +5,7 @@ import asyncio
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 
@@ -20,7 +21,11 @@ from .providers import (
 
 # Load environment variables from .env and .env.local
 load_dotenv()
-load_dotenv('.env.local', override=True)
+# Try to load .env.local from the current directory
+env_local_path = Path('.env.local').resolve()
+if env_local_path.exists():
+    load_dotenv(str(env_local_path), override=True)
+    logger.info(f"Loaded .env.local from {env_local_path}")
 
 # Configure logging (stderr only for stdio-based MCP)
 logging.basicConfig(
