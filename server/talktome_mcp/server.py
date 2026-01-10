@@ -18,8 +18,9 @@ from .providers import (
     PiperTTSProvider
 )
 
-# Load environment variables
+# Load environment variables from .env and .env.local
 load_dotenv()
+load_dotenv('.env.local', override=True)
 
 # Configure logging (stderr only for stdio-based MCP)
 logging.basicConfig(
