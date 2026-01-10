@@ -2,7 +2,7 @@
 
 **Let Claude communicate with you through your computer's microphone and speakers.**
 
-Start a task, walk away. Your computer speaks when Claude is done, stuck, or needs a decision. Have natural voice conversations with Claude using local audio.
+Have natural voice conversations with Claude using local audio. Start a task, walk away. Your computer speaks when Claude is done, stuck, or needs a decision.
 
 <img src="./static/taxi-driver.jpg" width="800" alt="TalkToMe - Voice conversations with Claude">
 
@@ -105,6 +105,9 @@ TALKTOME_STT_PROVIDER=whisper
 
 # Whisper model (tiny, base, small, medium, large-v3)
 TALKTOME_WHISPER_MODEL=base
+
+# Timeout for waiting for user speech in milliseconds (default: 180000 = 3 minutes)
+TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
 ```
 
 ### 6. Install the Python MCP Server
@@ -186,22 +189,73 @@ The MCP server runs locally and directly interfaces with your system's audio.
 
 ---
 
+## Conversation Flow
+
+TalkToMe supports natural turn-taking voice conversations:
+
+```python
+# 1. Start conversation with a question (blocks for response)
+result = await initiate_call(message="Hi! I'm ready to help. What would you like me to do?")
+user_response = result['user_response']  # e.g., "Help me debug my authentication code"
+
+# 2. Continue with follow-up questions (each blocks for response)
+result = await continue_call(message="Got it. What's the issue with the auth code?")
+user_response = result['user_response']  # e.g., "Users can't log in after password reset"
+
+# 3. Acknowledge before long tasks (non-blocking)
+await speak(message="Let me investigate the password reset flow. This might take a minute...")
+# Do your investigation...
+# code review, file search, etc.
+
+# 4. Continue with findings (blocks for response)
+result = await continue_call(message="I found the bug! The token expiration wasn't set correctly. Should I fix it?")
+user_response = result['user_response']  # e.g., "Yes, please fix it"
+
+# 5. End the conversation
+await end_call()
+```
+
+**Key patterns:**
+- Use `initiate_call(message)` or `continue_call(message)` when you **need a response**
+- Use `speak(message)` when you just want to **acknowledge** before doing work
+- The conversation tools block until the user speaks or timeout (default: 3 minutes)
+
+---
+
 ## Tools
 
 ### `initiate_call`
-Start an audio conversation.
+Start an audio conversation with an optional initial message. Waits for and returns the user's response.
 
 ```python
+# Start conversation with initial question (blocks for response)
+result = await initiate_call(message="Hey! I finished the auth system. What should I work on next?")
+# Returns: {"success": true, "call_id": "local-1", "user_response": "Add some tests"}
+
+# Or start without initial message
 result = await initiate_call()
 # Returns: {"success": true, "call_id": "local-1", ...}
 ```
 
-### `speak`
-Speak text through the active audio session.
+### `continue_call`
+Continue an active conversation with a follow-up message. Waits for and returns the user's response.
 
 ```python
-result = await speak(text="Hey! I finished the auth system. What should I work on next?")
-# Returns: {"success": true, "status": "Speech sent successfully"}
+# Continue conversation (blocks for response)
+result = await continue_call(message="Got it. Should I add unit tests or integration tests?")
+# Returns: {"success": true, "user_response": "Both please", "call_id": "local-1"}
+```
+
+### `speak`
+Speak text through the active audio session **without waiting** for a response. Use this to acknowledge requests or provide status updates before starting time-consuming operations.
+
+```python
+# Acknowledge without waiting (non-blocking)
+await speak(text="Let me search for that information. Give me a moment...")
+# Continue with your long-running task
+results = await perform_search()
+# Then continue the conversation
+result = await continue_call(message=f"I found {len(results)} results. What would you like to know?")
 ```
 
 ### `get_transcript`
