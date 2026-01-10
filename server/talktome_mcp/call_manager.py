@@ -113,6 +113,9 @@ class CallManager:
                 'timestamp': datetime.now().isoformat()
             })
 
+            # Pause recording to prevent audio feedback/echo
+            await self.phone_provider.pause_recording(self.active_call_id)
+
             # Synthesize speech
             logger.info(f"Synthesizing: {text}")
 
@@ -124,6 +127,9 @@ class CallManager:
                 audio = await self.tts_provider.synthesize(text)
                 await self.phone_provider.send_audio(self.active_call_id, audio)
 
+            # Resume recording after speech completes
+            await self.phone_provider.resume_recording(self.active_call_id)
+
             return {
                 'success': True,
                 'status': 'Speech sent successfully'
@@ -131,6 +137,8 @@ class CallManager:
 
         except Exception as e:
             logger.error(f"Failed to speak: {e}")
+            # Make sure to resume recording even if there's an error
+            await self.phone_provider.resume_recording(self.active_call_id)
             return {
                 'success': False,
                 'error': str(e)

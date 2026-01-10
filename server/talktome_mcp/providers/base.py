@@ -33,6 +33,16 @@ class PhoneProvider(ABC):
         pass
 
     @abstractmethod
+    async def pause_recording(self, call_id: str) -> None:
+        """Pause recording to prevent audio feedback during TTS playback."""
+        pass
+
+    @abstractmethod
+    async def resume_recording(self, call_id: str) -> None:
+        """Resume recording after TTS playback completes."""
+        pass
+
+    @abstractmethod
     async def get_audio_stream(self, call_id: str) -> AsyncGenerator[bytes, None]:
         """Get incoming audio stream from the call."""
         pass

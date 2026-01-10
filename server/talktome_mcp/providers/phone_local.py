@@ -48,6 +48,14 @@ class LocalCall(Call):
         )
         self.stream.start()
 
+    def pause_recording(self):
+        """Pause recording to prevent audio feedback."""
+        self.recording = False
+
+    def resume_recording(self):
+        """Resume recording after audio playback completes."""
+        self.recording = True
+
     def stop_recording(self):
         """Stop recording audio."""
         self.recording = False
@@ -138,6 +146,16 @@ class LocalPhoneProvider(PhoneProvider):
         if call_id in self.calls:
             call = self.calls[call_id]
             await call.play_audio(audio)
+
+    async def pause_recording(self, call_id: str) -> None:
+        """Pause recording to prevent audio feedback during TTS playback."""
+        if call_id in self.calls:
+            self.calls[call_id].pause_recording()
+
+    async def resume_recording(self, call_id: str) -> None:
+        """Resume recording after TTS playback completes."""
+        if call_id in self.calls:
+            self.calls[call_id].resume_recording()
 
     async def get_audio_stream(self, call_id: str) -> AsyncGenerator[bytes, None]:
         """Get audio stream from microphone."""
