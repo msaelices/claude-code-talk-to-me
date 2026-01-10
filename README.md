@@ -4,7 +4,7 @@
 
 Have natural voice conversations with Claude using local audio. Start a task, walk away. Your computer speaks when Claude is done, stuck, or needs a decision.
 
-<img src="./static/taxi-driver.jpg" width="800" alt="TalkToMe - Voice conversations with Claude">
+<img src="./static/taxi-driver.jpg" width="500" alt="TalkToMe - Voice conversations with Claude">
 
 - **Zero cost** - No phone charges, no API costs for communication (optional ElevenLabs available)
 - **Privacy-first** - All audio processing can happen locally on your machine
