@@ -187,6 +187,61 @@ Microphone and speakers ready for communication
 
 ---
 
+## How to Use
+
+With TalkToMe installed, simply ask Claude to use it:
+
+```
+You: "Use the talk to me skill to ask me what to work on"
+```
+
+Claude will then:
+1. Start a voice session
+2. Speak to you through your speakers
+3. Listen to your responses via microphone
+4. Work silently on long tasks, then speak up when done or needs input
+
+### Quick Tips
+
+- **Speak naturally** - No need for perfect diction
+- **Be specific** - "Users can't log in after password reset" is better than "fix the bug"
+- **Step away** - Claude will speak up when done or needs a decision
+- **End anytime** - Say "that's all" or press Ctrl+C
+
+### Example Session
+
+```
+You: "Use talk to me to help me refactor my code"
+
+Claude (voice): "Hi! What would you like me to work on?"
+
+You: "The authentication module is messy. Can you clean it up?"
+
+Claude (voice): "Got it! Let me examine it first..."
+
+[Silence while Claude works...]
+
+Claude (voice): "I found several issues. Should I start by extracting the validation logic?"
+
+You: "Yes, please."
+
+Claude (voice): "On it! I'm extracting the validation into a separate service..."
+
+[More silence while Claude works...]
+
+Claude (voice): "Done! The code is much cleaner now. Should I add tests?"
+
+You: "That would be great."
+
+Claude (voice): "I'll create unit tests now... Done! Anything else?"
+
+You: "No, that's everything. Thanks!"
+
+Claude (voice): "You're welcome!"
+```
+
+---
+
 ## How It Works
 
 ```
