@@ -148,7 +148,45 @@ Add the MCP server to your Claude Code configuration (`~/.config/claude-code/con
 
 Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository.
 
-### 8. (Optional) Add the Skill for Better Claude Integration
+### 8. Configure Permissions for Natural Conversations
+
+**Important**: For natural voice conversations, you need to allow TalkToMe tools to run without permission prompts. Otherwise, Claude will pause to ask for permission instead of speaking, breaking the conversation flow.
+
+Add the TalkToMe tools to your allowed tools list. You can do this by running these commands in Claude Code:
+
+```bash
+# Allow all TalkToMe MCP tools
+/allowed-tools mcp__talktome__initiate_call
+/allowed-tools mcp__talktome__continue_call
+/allowed-tools mcp__talktome__speak
+/allowed-tools mcp__talktome__report_completion
+/allowed-tools mcp__talktome__get_transcript
+/allowed-tools mcp__talktome__end_call
+/allowed-tools mcp__talktome__test_audio
+```
+
+Or add them to your Claude Code settings file (`~/.claude/settings.json`):
+
+```json
+{
+  "allowedTools": [
+    "mcp__talktome__initiate_call",
+    "mcp__talktome__continue_call",
+    "mcp__talktome__speak",
+    "mcp__talktome__report_completion",
+    "mcp__talktome__get_transcript",
+    "mcp__talktome__end_call",
+    "mcp__talktome__test_audio"
+  ]
+}
+```
+
+**Why is this needed?**
+- Without auto-approval, Claude will ask for permission before each voice tool call
+- While waiting for permission, the voice output won't reach you
+- This creates awkward pauses and breaks the natural conversation flow
+
+### 9. (Optional) Add the Skill for Better Claude Integration
 
 The TalkToMe skill provides Claude with built-in instructions on when and how to use voice communication effectively.
 
@@ -171,7 +209,7 @@ cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/
 - Provides usage examples and conversation patterns
 - Ensures Claude uses voice tools appropriately during active calls
 
-### 9. Run the Server (for testing)
+### 10. Run the Server (for testing)
 
 ```bash
 uv run -m talktome_mcp.server
