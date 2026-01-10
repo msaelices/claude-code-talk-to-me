@@ -10,11 +10,11 @@ TalkToMe is a Claude Code plugin (MCP server) that enables Claude to communicate
 
 ### Setup and Run
 ```bash
-# Install Python dependencies
-cd server && pip install -e .
+# Install Python dependencies (requires uv)
+cd server && uv pip install -e .
 
 # Run the MCP server
-python3 -m talktome_mcp.server
+uv run -m talktome_mcp.server
 ```
 
 ### Model Setup
@@ -22,12 +22,11 @@ python3 -m talktome_mcp.server
 # Install prerequisites (system packages)
 ./install-prerequisites.sh
 
-# Download models (requires venv activation first)
-source venv/bin/activate
-python3 download-models.py
+# Download models
+uv run python3 download-models.py
 
 # Test audio system
-python3 test-audio.py
+uv run python3 test-audio.py
 ```
 
 ### Environment Configuration
