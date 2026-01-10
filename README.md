@@ -120,13 +120,6 @@ cd server
 uv pip install -e .
 ```
 
-**Optional dependencies** - For cloud TTS support:
-
-```bash
-# Install ElevenLabs provider (for ElevenLabs TTS)
-uv pip install -e ".[elevenlabs]"
-```
-
 ### 7. Install in Claude Code
 
 Add the MCP server to your Claude Code configuration (`~/.config/claude-code/config.json`):
