@@ -107,7 +107,7 @@ async def initiate_call() -> Dict[str, Any]:
 
 @mcp.tool(
     name="speak",
-    description="Convert text to speech and play it through the speakers"
+    description="Convert text to speech and play it through the speakers. Returns any new transcriptions from the user."
 )
 async def speak(text: str) -> Dict[str, Any]:
     """
@@ -117,7 +117,7 @@ async def speak(text: str) -> Dict[str, Any]:
         text: Text to speak
 
     Returns:
-        Dict with success status
+        Dict with success status and any new user transcriptions
     """
     if not call_manager:
         return {
@@ -132,6 +132,11 @@ async def speak(text: str) -> Dict[str, Any]:
         }
 
     result = await call_manager.speak(text)
+
+    # Also return any new transcriptions from the user since last speak
+    transcript_info = await call_manager.get_transcript()
+    result['transcript'] = transcript_info.get('transcript', [])
+
     return result
 
 
