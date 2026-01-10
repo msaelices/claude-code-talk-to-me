@@ -67,39 +67,75 @@ class PiperTTSProvider(TTSProvider):
         Returns:
             Audio data as bytes (PCM 16-bit, 22050Hz)
         """
-        # Build command arguments
-        cmd = [sys.executable, '-m', 'piper',
-               '-m', str(self.model_path),
-               '--output-raw',  # Output raw PCM
-               '--quiet']       # Suppress progress output
+        import tempfile
 
-        # Add optional voice parameters
-        if self.speaker_id is not None:
-            cmd.extend(['--speaker', str(self.speaker_id)])
-        if self.length_scale is not None:
-            cmd.extend(['--length-scale', str(self.length_scale)])
-        if self.noise_scale is not None:
-            cmd.extend(['--noise-scale', str(self.noise_scale)])
-        if self.noise_w is not None:
-            cmd.extend(['--noise-w', str(self.noise_w)])
+        # Create a temporary file for input text
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write(text)
+            input_file = f.name
 
-        # Run Piper asynchronously
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+        # Create a temporary file for output audio
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+            output_file = f.name
 
-        # Send text and get audio
-        stdout, stderr = await process.communicate(text.encode('utf-8'))
+        try:
+            # Build command arguments
+            cmd = [sys.executable, '-m', 'piper',
+                   '-m', str(self.model_path),
+                   '-i', input_file,  # Input file
+                   '-o', output_file,  # Output file
+                   '--quiet']          # Suppress progress output
 
-        if process.returncode != 0:
-            error_msg = stderr.decode('utf-8') if stderr else 'Unknown error'
-            raise RuntimeError(f"Piper synthesis failed: {error_msg}")
+            # Debug: log the command
+            logger.debug(f"Running Piper command: {' '.join(cmd)}")
 
-        # Return raw PCM audio (22050Hz, 16-bit mono)
-        return stdout
+            # Add optional voice parameters
+            if self.speaker_id is not None:
+                cmd.extend(['--speaker', str(self.speaker_id)])
+            if self.length_scale is not None:
+                cmd.extend(['--length-scale', str(self.length_scale)])
+            if self.noise_scale is not None:
+                cmd.extend(['--noise-scale', str(self.noise_scale)])
+            if self.noise_w is not None:
+                cmd.extend(['--noise-w', str(self.noise_w)])
+
+            # Run Piper asynchronously
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout, stderr = await process.communicate()
+
+            if process.returncode != 0:
+                error_msg = stderr.decode('utf-8') if stderr else 'Unknown error'
+                raise RuntimeError(f"Piper synthesis failed: {error_msg}")
+
+            # Read the output WAV file and extract PCM data
+            with open(output_file, 'rb') as f:
+                # Skip WAV header (44 bytes) and return raw PCM
+                f.seek(44)
+                audio_data = f.read()
+
+            # Debug: log what we received
+            logger.debug(f"Piper returned {len(audio_data)} bytes of audio, stderr: {len(stderr)} bytes")
+            if stderr:
+                logger.warning(f"Piper stderr: {stderr.decode('utf-8', errors='replace')[:200]}")
+
+            # Return raw PCM audio (22050Hz, 16-bit mono)
+            return audio_data
+
+        finally:
+            # Clean up temporary files
+            try:
+                os.unlink(input_file)
+            except:
+                pass
+            try:
+                os.unlink(output_file)
+            except:
+                pass
 
     async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
         """

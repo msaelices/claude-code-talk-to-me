@@ -30,7 +30,8 @@ class WhisperSTTProvider(RealtimeSTTProvider):
         self.chunk_duration_ms = config.get('chunk_duration_ms', 2000)
         self.silence_duration_ms = config.get('silence_duration_ms',
                                              int(os.getenv('TALKTOME_STT_SILENCE_DURATION_MS', '800')))
-        self.vad_threshold = config.get('vad_threshold', 0.5)
+        self.vad_threshold = config.get('vad_threshold',
+                                        float(os.getenv('TALKTOME_STT_VAD_THRESHOLD', '0.5')))
 
         # Auto-detect device if needed
         if self.device == 'auto':
