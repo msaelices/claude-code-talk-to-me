@@ -146,7 +146,30 @@ Add the MCP server to your Claude Code configuration (`~/.config/claude-code/con
 
 Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository.
 
-### 8. Run the Server (for testing)
+### 8. (Optional) Add the Skill for Better Claude Integration
+
+The TalkToMe skill provides Claude with built-in instructions on when and how to use voice communication effectively.
+
+```bash
+# Create the skills directory if it doesn't exist
+mkdir -p ~/.config/claude-code/skills
+
+# Symlink the skill (recommended)
+ln -s /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.config/claude-code/skills/talk-to-me
+```
+
+Or copy the skill directly:
+```bash
+cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.config/claude-code/skills/
+```
+
+**Why add the skill?**
+- Claude learns best practices for voice-first communication
+- Includes instructions on when to use `speak` vs `continue_call` vs `report_completion`
+- Provides usage examples and conversation patterns
+- Ensures Claude uses voice tools appropriately during active calls
+
+### 9. Run the Server (for testing)
 
 ```bash
 uv run -m talktome_mcp.server
