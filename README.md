@@ -114,7 +114,36 @@ cd server
 uv pip install -e .
 ```
 
-### 7. Run the Server
+### 7. Install in Claude Code
+
+Add the MCP server to your Claude Code configuration (`~/.config/claude-code/config.json`):
+
+```json
+{
+  "mcpServers": {
+    "talktome": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/path/to/claude-code-talk-to-me/server",
+        "-m",
+        "talktome_mcp.server"
+      ],
+      "env": {
+        "TALKTOME_AUDIO_SYSTEM": "pulseaudio",
+        "TALKTOME_TTS_PROVIDER": "piper",
+        "TALKTOME_STT_PROVIDER": "whisper",
+        "TALKTOME_WHISPER_MODEL": "base"
+      }
+    }
+  }
+}
+```
+
+Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository.
+
+### 8. Run the Server (for testing)
 
 ```bash
 uv run -m talktome_mcp.server
