@@ -20,10 +20,25 @@ class PiperTTSProvider(TTSProvider):
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         config = config or {}
 
-        # Model configuration
+        # Model configuration - resolve relative to server directory or project root
         default_model = Path('models/piper/en_US-amy-medium.onnx')
-        self.model_path = Path(config.get('model_path',
-                                         os.getenv('TALKTOME_PIPER_MODEL_PATH', str(default_model))))
+
+        # Get model path from config, env var, or default
+        model_path_str = config.get('model_path',
+                                    os.getenv('TALKTOME_PIPER_MODEL_PATH', str(default_model)))
+        self.model_path = Path(model_path_str)
+
+        # If relative path and doesn't exist, try resolving from project root
+        if not self.model_path.is_absolute() and not self.model_path.exists():
+            # Get the directory containing this file (server/talktome_mcp/providers/)
+            # and go up to project root
+            providers_dir = Path(__file__).parent
+            server_dir = providers_dir.parent
+            project_root = server_dir.parent
+            alternative_path = project_root / self.model_path
+
+            if alternative_path.exists():
+                self.model_path = alternative_path
 
         # Voice parameters
         self.speaker_id = config.get('speaker_id')
@@ -35,6 +50,9 @@ class PiperTTSProvider(TTSProvider):
         if not self.model_path.exists():
             logger.warning(f"Piper model not found at {self.model_path}")
             logger.warning("Please run: python3 download-models.py")
+
+        # Convert to absolute path for subprocess
+        self.model_path = self.model_path.resolve()
 
         logger.info(f"Using Piper model: {self.model_path}")
 

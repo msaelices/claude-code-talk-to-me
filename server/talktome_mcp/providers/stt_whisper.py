@@ -128,15 +128,32 @@ class WhisperSTTProvider(RealtimeSTTProvider):
 
         # Check for voice activity
         if self.vad_model:
+            # Silero VAD requires exactly 512 samples for 16kHz (32ms)
+            # We need to process in 512-sample chunks
             audio_array = np.frombuffer(audio, dtype=np.int16).astype(np.float32) / 32768.0
-            audio_tensor = torch.from_numpy(audio_array)
 
-            speech_prob = self.vad_model(audio_tensor, self.sample_rate).item()
+            # Process audio in 512-sample chunks for VAD
+            chunk_size = 512
+            has_speech = False
 
-            if speech_prob < self.vad_threshold:
-                self.silence_samples += len(audio) // 2  # 16-bit samples
-            else:
+            for i in range(0, len(audio_array), chunk_size):
+                chunk = audio_array[i:i + chunk_size]
+
+                # Skip incomplete chunks
+                if len(chunk) != chunk_size:
+                    continue
+
+                audio_tensor = torch.from_numpy(chunk)
+                speech_prob = self.vad_model(audio_tensor, self.sample_rate).item()
+
+                if speech_prob >= self.vad_threshold:
+                    has_speech = True
+                    break
+
+            if has_speech:
                 self.silence_samples = 0
+            else:
+                self.silence_samples += len(audio) // 2  # 16-bit samples
 
         else:
             # Simple amplitude-based detection

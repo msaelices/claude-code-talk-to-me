@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class LocalCall(Call):
     """Represents a local audio call session."""
 
-    def __init__(self, call_id: str, sample_rate: int = 16000):
+    def __init__(self, call_id: str, sample_rate: int = 16000, event_loop: Optional[asyncio.AbstractEventLoop] = None):
         super().__init__(call_id)
         self.sample_rate = sample_rate
         self.audio_queue = asyncio.Queue()
@@ -24,6 +24,7 @@ class LocalCall(Call):
         self.playback_queue = Queue()
         self.record_thread: Optional[threading.Thread] = None
         self.playback_thread: Optional[threading.Thread] = None
+        self.event_loop = event_loop or asyncio.get_event_loop()
 
     def start_recording(self):
         """Start recording audio from microphone."""
@@ -35,7 +36,7 @@ class LocalCall(Call):
                 audio_bytes = (indata * 32767).astype(np.int16).tobytes()
                 asyncio.run_coroutine_threadsafe(
                     self.audio_queue.put(audio_bytes),
-                    asyncio.get_event_loop()
+                    self.event_loop
                 )
 
         self.stream = sd.InputStream(
@@ -113,7 +114,9 @@ class LocalPhoneProvider(PhoneProvider):
 
         logger.info(f"Starting local audio session: {call_id}")
 
-        call = LocalCall(call_id)
+        # Get current event loop for use in audio callback thread
+        loop = asyncio.get_event_loop()
+        call = LocalCall(call_id, event_loop=loop)
         self.calls[call_id] = call
 
         # Start recording and playback
