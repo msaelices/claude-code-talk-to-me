@@ -156,13 +156,10 @@ class PiperTTSProvider(TTSProvider):
             yield audio
             return
 
-        # Process sentences in parallel for streaming
-        tasks = [self.synthesize(sentence) for sentence in sentences]
-
-        # Yield audio chunks as they complete
-        for task in asyncio.as_completed(tasks):
+        # Process sentences sequentially to prevent audio overlap
+        for sentence in sentences:
             try:
-                audio = await task
+                audio = await self.synthesize(sentence)
                 if audio:
                     yield audio
             except Exception as e:
