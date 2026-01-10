@@ -1,6 +1,5 @@
 """ElevenLabs TTS provider for cloud-based text-to-speech synthesis."""
 
-import asyncio
 import io
 import logging
 import os
@@ -105,82 +104,28 @@ class ElevenLabsTTSProvider(TTSProvider):
 
     async def _mp3_to_pcm(self, mp3_data: bytes) -> bytes:
         """
-        Convert MP3 audio to PCM 16-bit 22050Hz mono.
+        Convert MP3 audio to PCM 16-bit 22050Hz mono using pydub.
 
-        This is a simplified implementation. In production, you'd use ffmpeg
-        or a proper audio library like pydub.
+        Note: pydub requires ffmpeg to be installed for MP3 decoding.
         """
-        import tempfile
-
-        # Try using ffmpeg for conversion
         try:
-            # Create temp files
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as mp3_file:
-                mp3_file.write(mp3_data)
-                mp3_path = mp3_file.name
-
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as wav_file:
-                wav_path = wav_file.name
-
-            # Use ffmpeg to convert: MP3 -> WAV (PCM 16-bit, 22050Hz, mono)
-            process = await asyncio.create_subprocess_exec(
-                'ffmpeg',
-                '-y',  # Overwrite output file without asking
-                '-i', mp3_path,
-                '-f', 'wav',
-                '-ar', '22050',  # Sample rate
-                '-ac', '1',      # Mono
-                '-acodec', 'pcm_s16le',  # 16-bit little-endian PCM
-                '-loglevel', 'error',  # Suppress output
-                wav_path
+            from pydub import AudioSegment
+        except ImportError:
+            raise RuntimeError(
+                "pydub is required for MP3 conversion. Install it with: pip install pydub"
             )
-            await process.communicate()
 
-            if process.returncode != 0:
-                raise RuntimeError("ffmpeg conversion failed")
+        # Convert MP3 to audio segment (in memory, no temp files)
+        audio = AudioSegment.from_mp3(io.BytesIO(mp3_data))
 
-            # Read the WAV file and skip header
-            with open(wav_path, 'rb') as f:
-                # Skip WAV header (44 bytes)
-                f.seek(44)
-                pcm_data = f.read()
+        # Convert to required format: 22050Hz, mono, 16-bit
+        audio = audio.set_frame_rate(22050).set_channels(1)
 
-            # Clean up temp files
-            try:
-                os.unlink(mp3_path)
-            except:
-                pass
-            try:
-                os.unlink(wav_path)
-            except:
-                pass
+        # Export as raw PCM
+        pcm_io = io.BytesIO()
+        audio.export(pcm_io, format='raw', codec='pcm_s16le')
 
-            return pcm_data
-
-        except (FileNotFoundError, RuntimeError):
-            # Fallback: try using pydub if available
-            try:
-                from pydub import AudioSegment
-
-                # Convert MP3 to audio
-                audio = AudioSegment.from_mp3(io.BytesIO(mp3_data))
-
-                # Convert to required format: 22050Hz, mono, 16-bit
-                audio = audio.set_frame_rate(22050)
-                audio = audio.set_channels(1)
-
-                # Export as raw PCM
-                pcm_io = io.BytesIO()
-                audio.export(pcm_io, format='raw', codec='pcm_s16le')
-
-                return pcm_io.getvalue()
-
-            except ImportError:
-                logger.error("Neither ffmpeg nor pydub available for MP3 conversion")
-                raise RuntimeError(
-                    "ElevenLabs returns MP3 format. Please install ffmpeg or "
-                    "install pydub: pip install pydub"
-                )
+        return pcm_io.getvalue()
 
     async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
         """
