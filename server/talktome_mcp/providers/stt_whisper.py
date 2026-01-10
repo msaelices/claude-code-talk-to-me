@@ -45,6 +45,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
                 self.compute_type = 'int8'
 
         logger.info(f"Loading Whisper model: {self.model_name} on {self.device} with {self.compute_type}")
+        logger.info(f"VAD threshold: {self.vad_threshold}")
 
         # Initialize model
         self.model = WhisperModel(
