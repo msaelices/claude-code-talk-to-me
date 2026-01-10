@@ -86,7 +86,7 @@ init_call_manager()
 # Tool definitions
 @mcp.tool(
     name="initiate_call",
-    description="Start a local audio communication session using the computer's microphone and speakers. Use when you need voice input, want to report completed work, or need real-time discussion."
+    description="Start a local audio communication session using the computer's microphone and speakers. IMPORTANT: Once a call is active, ALL communication with the user must go through voice tools (continue_call, speak, report_completion). Do NOT provide text-only responses during an active call - the user won't see them."
 )
 async def initiate_call(message: str = "") -> Dict[str, Any]:
     """
@@ -209,6 +209,57 @@ async def speak(text: str) -> Dict[str, Any]:
 
     result = await call_manager.speak(text)
     return result
+
+
+@mcp.tool(
+    name="report_completion",
+    description="CRITICAL: After completing ANY work during an active call (git push, file edits, etc.), you MUST use this tool to report completion via voice. Do NOT provide text-only summaries - the user is listening, not reading. This speaks your message and waits for their next instruction."
+)
+async def report_completion(message: str) -> Dict[str, Any]:
+    """
+    Report task completion and wait for next user instruction.
+
+    This tool combines speaking a completion message with listening for
+    the user's next request. Use this after completing work during an
+    active call to maintain voice conversation flow.
+
+    Args:
+        message: Completion message to speak (e.g., "Done! I've pushed the commits.")
+
+    Returns:
+        Dict with success status and user's next response
+    """
+    if not call_manager:
+        return {
+            'success': False,
+            'error': 'Call manager not initialized'
+        }
+
+    if not call_manager.active_call_id:
+        return {
+            'success': False,
+            'error': 'No active call'
+        }
+
+    if not message:
+        return {
+            'success': False,
+            'error': 'Message parameter is required'
+        }
+
+    try:
+        user_response = await call_manager.speak_and_listen(message)
+        return {
+            'success': True,
+            'user_response': user_response,
+            'call_id': call_manager.active_call_id
+        }
+    except asyncio.TimeoutError:
+        return {
+            'success': False,
+            'error': 'Timeout waiting for user response',
+            'call_id': call_manager.active_call_id
+        }
 
 
 @mcp.tool(
