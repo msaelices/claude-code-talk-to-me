@@ -1,7 +1,7 @@
-# Phone Call Input Skill
+# Talk to Me Skill
 
 ## Description
-Call the user on the phone for real-time voice conversations. Use this when you need input, want to report on completed work, or need to discuss next steps.
+Talk to the user through their computer's microphone and speakers for real-time voice conversations. Use this when you need input, want to report on completed work, or need to discuss next steps.
 
 ## When to Use This Skill
 
@@ -20,7 +20,7 @@ Call the user on the phone for real-time voice conversations. Use this when you 
 ## Tools
 
 ### `initiate_call`
-Start a phone call with the user.
+Start a voice conversation with the user.
 
 **Parameters:**
 - `message` (string): What you want to say. Be natural and conversational.
