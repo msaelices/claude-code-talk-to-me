@@ -66,6 +66,7 @@ class LocalCall(Call):
     def start_playback(self):
         """Start playback thread for audio output."""
         def playback_worker():
+            logger.info(f"[{self.call_id}] Playback thread started")
             with sd.OutputStream(
                 samplerate=22050,  # Piper TTS outputs at 22050Hz
                 channels=1,
@@ -75,14 +76,16 @@ class LocalCall(Call):
                     try:
                         audio = self.playback_queue.get(timeout=0.1)
                         if audio is None:
+                            logger.info(f"[{self.call_id}] Playback thread received None, stopping")
                             break
                         # Convert bytes to numpy array
                         samples = np.frombuffer(audio, dtype=np.int16)
                         stream.write(samples)
                     except:
                         continue
+            logger.info(f"[{self.call_id}] Playback thread ended")
 
-        self.playback_thread = threading.Thread(target=playback_worker)
+        self.playback_thread = threading.Thread(target=playback_worker, daemon=True)
         self.playback_thread.start()
 
     async def play_audio(self, audio: bytes):
@@ -117,6 +120,9 @@ class LocalPhoneProvider(PhoneProvider):
         Returns:
             Call ID for the session
         """
+        # Clean up any existing calls first to prevent accumulation
+        await self.cleanup()
+
         self.call_counter += 1
         call_id = f"local-{self.call_counter}"
 
