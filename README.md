@@ -9,7 +9,6 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 - **Zero cost** - No phone charges, no API costs for communication (optional ElevenLabs available)
 - **Privacy-first** - All audio processing can happen locally on your machine
 - **Multi-turn conversations** - Talk through decisions naturally
-- **Low latency** - Direct audio I/O without network delays
 - **Tool-use composable** - Claude can e.g. do a web search while talking with you
 
 ---
