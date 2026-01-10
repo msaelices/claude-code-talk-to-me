@@ -34,8 +34,9 @@ Start a task, walk away. Your computer speaks when Claude is done, stuck, or nee
 # Install audio system (if not already present)
 sudo apt-get install pulseaudio-utils  # Or pipewire-pulse for PipeWire
 
-# Install Python 3.8+ and pip
-sudo apt-get install python3 python3-pip python3-venv
+# Install Python 3.10+ and uv
+sudo apt-get install python3
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install ffmpeg (optional, for audio format conversion)
 sudo apt-get install ffmpeg
@@ -60,11 +61,8 @@ This installs:
 ### 3. Download Models
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
-
 # Download models interactively
-python3 download-models.py
+uv run python3 download-models.py
 ```
 
 Choose:
@@ -75,7 +73,7 @@ Choose:
 
 ```bash
 # Test audio devices and models
-python3 test-audio.py
+uv run python3 test-audio.py
 ```
 
 This will:
@@ -113,13 +111,13 @@ TALKTOME_WHISPER_MODEL=base
 
 ```bash
 cd server
-pip install -r requirements.txt
+uv pip install -e .
 ```
 
 ### 7. Run the Server
 
 ```bash
-python3 -m talktome_mcp.server
+uv run -m talktome_mcp.server
 ```
 
 You should see:
@@ -269,7 +267,7 @@ arecord -d 5 test.wav && aplay test.wav
 ```bash
 # Re-download the model
 rm -rf ~/.cache/huggingface/hub/models--Systran--faster-whisper-*
-python3 test-whisper-download.py
+uv run python3 test-whisper-download.py
 ```
 
 ### High CPU Usage
@@ -291,8 +289,8 @@ sudo usermod -a -G audio $USER
 
 ```bash
 # Install CUDA support
-pip install nvidia-cublas-cu11 nvidia-cudnn-cu11
-pip install faster-whisper --upgrade
+uv pip install nvidia-cublas-cu11 nvidia-cudnn-cu11
+uv pip install faster-whisper --upgrade
 
 # Configure for GPU
 echo "TALKTOME_WHISPER_DEVICE=cuda" >> .env.local
@@ -326,8 +324,8 @@ echo "TALKTOME_PIPER_MODEL_PATH=models/piper/en_US-lessac-medium.onnx" >> .env.l
 
 ```bash
 cd server
-pip install -r requirements.txt  # Install dependencies
-python3 -m talktome_mcp.server    # Run the server
+uv pip install -e .  # Install dependencies
+uv run -m talktome_mcp.server    # Run the server
 ```
 
 To add new TTS/STT providers:
