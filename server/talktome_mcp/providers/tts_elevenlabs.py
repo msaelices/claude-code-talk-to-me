@@ -111,7 +111,6 @@ class ElevenLabsTTSProvider(TTSProvider):
         or a proper audio library like pydub.
         """
         import tempfile
-        import subprocess
 
         # Try using ffmpeg for conversion
         try:
@@ -126,6 +125,7 @@ class ElevenLabsTTSProvider(TTSProvider):
             # Use ffmpeg to convert: MP3 -> WAV (PCM 16-bit, 22050Hz, mono)
             process = await asyncio.create_subprocess_exec(
                 'ffmpeg',
+                '-y',  # Overwrite output file without asking
                 '-i', mp3_path,
                 '-f', 'wav',
                 '-ar', '22050',  # Sample rate
@@ -157,7 +157,7 @@ class ElevenLabsTTSProvider(TTSProvider):
 
             return pcm_data
 
-        except (FileNotFoundError, RuntimeError) as e:
+        except (FileNotFoundError, RuntimeError):
             # Fallback: try using pydub if available
             try:
                 from pydub import AudioSegment
@@ -170,7 +170,6 @@ class ElevenLabsTTSProvider(TTSProvider):
                 audio = audio.set_channels(1)
 
                 # Export as raw PCM
-                import io
                 pcm_io = io.BytesIO()
                 audio.export(pcm_io, format='raw', codec='pcm_s16le')
 
