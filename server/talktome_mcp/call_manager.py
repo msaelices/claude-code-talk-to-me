@@ -17,6 +17,10 @@ from .providers import (
 logger = logging.getLogger(__name__)
 
 
+# Default timeout for waiting for user speech (3 minutes)
+DEFAULT_TRANSCRIPT_TIMEOUT_MS = 180000
+
+
 class CallManager:
     """Manages phone/audio calls with TTS and STT integration."""
 
@@ -24,7 +28,8 @@ class CallManager:
         self,
         phone_provider: Optional[PhoneProvider] = None,
         tts_provider: Optional[TTSProvider] = None,
-        stt_provider: Optional[RealtimeSTTProvider] = None
+        stt_provider: Optional[RealtimeSTTProvider] = None,
+        transcript_timeout_ms: int = DEFAULT_TRANSCRIPT_TIMEOUT_MS
     ):
         """
         Initialize call manager with providers.
@@ -33,15 +38,19 @@ class CallManager:
             phone_provider: Provider for phone/audio I/O
             tts_provider: Text-to-speech provider
             stt_provider: Speech-to-text provider
+            transcript_timeout_ms: Timeout for waiting for user speech
         """
         self.phone_provider = phone_provider or LocalPhoneProvider()
         self.tts_provider = tts_provider or PiperTTSProvider()
         self.stt_provider = stt_provider or WhisperSTTProvider()
+        self.transcript_timeout_ms = transcript_timeout_ms
 
         self.active_call_id: Optional[str] = None
         self.call_active = False
         self.call_transcript = []
         self.processing_audio = False
+        self._pending_transcription: Optional[str] = None
+        self._transcription_event = asyncio.Event()
 
     async def initiate_call(self, phone_number: str = "local") -> Dict[str, Any]:
         """
@@ -237,10 +246,68 @@ class CallManager:
                     })
                     logger.info(f"User said: {text}")
 
+                    # Signal that transcription is available
+                    self._pending_transcription = text
+                    self._transcription_event.set()
+
         except Exception as e:
             logger.error(f"Error processing audio: {e}")
         finally:
             self.processing_audio = False
+
+    async def listen(self, timeout_ms: Optional[int] = None) -> str:
+        """
+        Listen for user speech and return the transcription.
+
+        This blocks until the user speaks or timeout is reached.
+
+        Args:
+            timeout_ms: Timeout in milliseconds (uses default if not specified)
+
+        Returns:
+            Transcribed text from user
+
+        Raises:
+            asyncio.TimeoutError: If no speech detected within timeout
+        """
+        if not self.active_call_id:
+            raise RuntimeError("No active call")
+
+        timeout_ms = timeout_ms or self.transcript_timeout_ms
+        timeout_sec = timeout_ms / 1000
+
+        # Clear previous event
+        self._transcription_event.clear()
+        self._pending_transcription = None
+
+        # Wait for transcription or timeout
+        try:
+            await asyncio.wait_for(
+                self._transcription_event.wait(),
+                timeout=timeout_sec
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Listen timeout after {timeout_ms}ms")
+            raise
+
+        # Return the transcribed text
+        result = self._pending_transcription or ""
+        self._pending_transcription = None
+        return result
+
+    async def speak_and_listen(self, text: str, timeout_ms: Optional[int] = None) -> str:
+        """
+        Speak text and then listen for user response.
+
+        Args:
+            text: Text to speak
+            timeout_ms: Timeout for waiting for response
+
+        Returns:
+            User's transcribed response
+        """
+        await self.speak(text)
+        return await self.listen(timeout_ms)
 
     def _calculate_duration(self) -> str:
         """Calculate call duration from transcript timestamps."""

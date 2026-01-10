@@ -86,14 +86,17 @@ init_call_manager()
 # Tool definitions
 @mcp.tool(
     name="initiate_call",
-    description="Start a local audio communication session using the computer's microphone and speakers"
+    description="Start a local audio communication session using the computer's microphone and speakers. Use when you need voice input, want to report completed work, or need real-time discussion."
 )
-async def initiate_call() -> Dict[str, Any]:
+async def initiate_call(message: str = "") -> Dict[str, Any]:
     """
     Start a local audio session for voice communication.
 
+    Args:
+        message: Optional initial message to speak to the user
+
     Returns:
-        Dict with success status and call details
+        Dict with success status, call details, and user's response if message was provided
     """
     if not call_manager:
         return {
@@ -101,23 +104,96 @@ async def initiate_call() -> Dict[str, Any]:
             'error': 'Call manager not initialized'
         }
 
+    # Initiate the call
     result = await call_manager.initiate_call("local")
+
+    if not result.get('success'):
+        return result
+
+    call_id = result.get('call_id')
+
+    # If message provided, speak and wait for response
+    if message and call_id:
+        try:
+            user_response = await call_manager.speak_and_listen(message)
+            return {
+                'success': True,
+                'call_id': call_id,
+                'status': 'Call initiated successfully',
+                'user_response': user_response,
+                'timestamp': result.get('timestamp')
+            }
+        except asyncio.TimeoutError:
+            await call_manager.end_call()
+            return {
+                'success': False,
+                'error': 'Timeout waiting for user response',
+                'call_id': call_id
+            }
+
     return result
 
 
 @mcp.tool(
+    name="continue_call",
+    description="Continue an active call with a follow-up message. Waits for and returns the user's response."
+)
+async def continue_call(message: str) -> Dict[str, Any]:
+    """
+    Continue an active call with a follow-up message.
+
+    Args:
+        message: Your follow-up message to speak
+
+    Returns:
+        Dict with success status and user's response
+    """
+    if not call_manager:
+        return {
+            'success': False,
+            'error': 'Call manager not initialized'
+        }
+
+    if not call_manager.active_call_id:
+        return {
+            'success': False,
+            'error': 'No active call'
+        }
+
+    if not message:
+        return {
+            'success': False,
+            'error': 'Message parameter is required'
+        }
+
+    try:
+        user_response = await call_manager.speak_and_listen(message)
+        return {
+            'success': True,
+            'user_response': user_response,
+            'call_id': call_manager.active_call_id
+        }
+    except asyncio.TimeoutError:
+        return {
+            'success': False,
+            'error': 'Timeout waiting for user response',
+            'call_id': call_manager.active_call_id
+        }
+
+
+@mcp.tool(
     name="speak",
-    description="Convert text to speech and play it through the speakers. Returns any new transcriptions from the user."
+    description="Convert text to speech and play it through the speakers without waiting for a response. Use this to acknowledge requests or provide status updates before starting time-consuming operations."
 )
 async def speak(text: str) -> Dict[str, Any]:
     """
-    Speak text through the active audio session.
+    Speak text through the active audio session without waiting for response.
 
     Args:
         text: Text to speak
 
     Returns:
-        Dict with success status and any new user transcriptions
+        Dict with success status
     """
     if not call_manager:
         return {
@@ -132,11 +208,6 @@ async def speak(text: str) -> Dict[str, Any]:
         }
 
     result = await call_manager.speak(text)
-
-    # Also return any new transcriptions from the user since last speak
-    transcript_info = await call_manager.get_transcript()
-    result['transcript'] = transcript_info.get('transcript', [])
-
     return result
 
 
