@@ -152,15 +152,15 @@ The TalkToMe skill provides Claude with built-in instructions on when and how to
 
 ```bash
 # Create the skills directory if it doesn't exist
-mkdir -p ~/.config/claude-code/skills
+mkdir -p ~/.claude/skills
 
 # Symlink the skill (recommended)
-ln -s /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.config/claude-code/skills/talk-to-me
+ln -s /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/talk-to-me
 ```
 
 Or copy the skill directly:
 ```bash
-cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.config/claude-code/skills/
+cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/
 ```
 
 **Why add the skill?**
