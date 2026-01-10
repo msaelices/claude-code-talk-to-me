@@ -16,24 +16,37 @@ from .call_manager import CallManager
 from .providers import (
     LocalPhoneProvider,
     WhisperSTTProvider,
-    PiperTTSProvider
+    PiperTTSProvider,
+    ElevenLabsTTSProvider
 )
 
 # Load environment variables from .env and .env.local
 load_dotenv()
-# Try to load .env.local from the current directory
-env_local_path = Path('.env.local').resolve()
-if env_local_path.exists():
-    load_dotenv(str(env_local_path), override=True)
-    logger.info(f"Loaded .env.local from {env_local_path}")
 
 # Configure logging (stderr only for stdio-based MCP)
+# IMPORTANT: This must be configured BEFORE any logging calls
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler(sys.stderr)]  # IMPORTANT: Use stderr for logging
 )
 logger = logging.getLogger(__name__)
+
+# Try to load .env.local from multiple possible locations
+# 1. Current directory
+# 2. Parent directory (if running from server/ subdirectory)
+# 3. Project root
+env_local_paths = [
+    Path('.env.local').resolve(),
+    Path(__file__).parent.parent.parent / '.env.local',  # Go up from server/talktome_mcp/ to project root
+    Path.cwd().parent / '.env.local' if Path.cwd().name == 'server' else None,
+]
+
+for env_local_path in env_local_paths:
+    if env_local_path and env_local_path.exists():
+        load_dotenv(str(env_local_path), override=True)
+        logger.info(f"Loaded .env.local from {env_local_path}")
+        break
 
 # Initialize MCP server
 mcp = FastMCP("talktome")
@@ -66,6 +79,8 @@ def init_call_manager():
                 logger.warning(f"Invalid TALKTOME_PIPER_SPEED value: {speed_str}, using default")
 
         tts_provider = PiperTTSProvider(config=tts_config)
+    elif tts_provider_name == 'elevenlabs':
+        tts_provider = ElevenLabsTTSProvider()
     else:
         # Default to Piper if unknown
         logger.warning(f"Unknown TTS provider: {tts_provider_name}, using Piper")

@@ -17,7 +17,7 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 ## Features
 
 - 🎙️ **Local Speech-to-Text** using Whisper (or OpenAI)
-- 🔊 **Local Text-to-Speech** using Piper neural TTS (or OpenAI)
+- 🔊 **Text-to-Speech** using Piper neural TTS (local), ElevenLabs (cloud), or OpenAI (cloud)
 - 🎧 **System Audio Integration** - Works with PulseAudio, PipeWire, or ALSA
 - 💻 **Cross-Platform** - Linux support (Windows/Mac with modifications)
 - 🔒 **Privacy** - All processing can be done locally without cloud services
@@ -97,7 +97,7 @@ Basic configuration (defaults work for most):
 # Audio system (pulseaudio, pipewire, or alsa)
 TALKTOME_AUDIO_SYSTEM=pulseaudio
 
-# TTS provider (piper for local, openai for cloud)
+# TTS provider (piper for local, elevenlabs for cloud)
 TALKTOME_TTS_PROVIDER=piper
 
 # Speaking speed (0.5 = very fast, 1.0 = normal, 1.5 = slow)
@@ -400,10 +400,10 @@ TALKTOME_WHISPER_DEVICE=cuda  # If you have NVIDIA GPU
 - No cloud API costs
 - All processing on your machine
 
-**Optional Cloud Mode** (if using OpenAI):
-- Speech-to-text: ~$0.006/min
-- Text-to-speech: ~$0.02/min
-- Total: ~$0.026/min
+**Optional Cloud Mode** (if using ElevenLabs or OpenAI):
+- **ElevenLabs TTS**: ~$0.30/min (Starter plan)
+- **OpenAI TTS**: ~$0.02/min
+- **OpenAI STT**: ~$0.006/min
 
 ---
 
@@ -466,9 +466,18 @@ echo "TALKTOME_WHISPER_COMPUTE_TYPE=float16" >> .env.local
 Use local STT with cloud TTS for best quality:
 ```env
 TALKTOME_STT_PROVIDER=whisper       # Local STT
-TALKTOME_TTS_PROVIDER=openai        # Cloud TTS
-TALKTOME_OPENAI_API_KEY=sk-xxx
+TALKTOME_TTS_PROVIDER=elevenlabs    # Cloud TTS (ElevenLabs)
+TALKTOME_ELEVENLABS_API_KEY=your_api_key_here
+TALKTOME_ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM  # Optional: Rachel voice
 ```
+
+**ElevenLabs TTS Configuration**:
+- Get your API key from https://elevenlabs.io
+- Default voice is "Rachel" (`21m00Tcm4TlvDq8ikWAM`)
+- Default model is `eleven_multilingual_v2`
+- Optional parameters:
+  - `TALKTOME_ELEVENLABS_STABILITY` (0.0-1.0, default: varies by voice)
+  - `TALKTOME_ELEVENLABS_SIMILARITY_BOOST` (0.0-1.0, default: varies by voice)
 
 ### Custom Voices
 
