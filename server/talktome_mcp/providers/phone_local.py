@@ -69,7 +69,7 @@ class LocalCall(Call):
     def start_playback(self):
         """Start playback thread for audio output."""
         def playback_worker():
-            logger.info(f"[{self.call_id}] Playback thread started")
+            logger.info(f"[{self.id}] Playback thread started")
             with sd.OutputStream(
                 samplerate=22050,  # Piper TTS outputs at 22050Hz
                 channels=1,
@@ -79,7 +79,7 @@ class LocalCall(Call):
                     try:
                         audio = self.playback_queue.get(timeout=0.1)
                         if audio is None:
-                            logger.info(f"[{self.call_id}] Playback thread received None, stopping")
+                            logger.info(f"[{self.id}] Playback thread received None, stopping")
                             break
 
                         # Signal that audio is playing
@@ -93,7 +93,7 @@ class LocalCall(Call):
                         self.playback_done_event.set()
                     except:
                         continue
-            logger.info(f"[{self.call_id}] Playback thread ended")
+            logger.info(f"[{self.id}] Playback thread ended")
 
         self.playback_thread = threading.Thread(target=playback_worker, daemon=True)
         self.playback_thread.start()
@@ -110,7 +110,7 @@ class LocalCall(Call):
             if self.playback_queue.empty() and self.playback_done_event.is_set():
                 return
             await asyncio.sleep(0.05)
-        logger.warning(f"[{self.call_id}] Timeout waiting for playback to complete")
+        logger.warning(f"[{self.id}] Timeout waiting for playback to complete")
 
     async def end(self):
         """End the local call."""
