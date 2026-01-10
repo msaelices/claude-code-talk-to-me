@@ -121,9 +121,9 @@ class ElevenLabsTTSProvider(TTSProvider):
         # Convert to required format: 22050Hz, mono, 16-bit
         audio = audio.set_frame_rate(22050).set_channels(1)
 
-        # Export as raw PCM
+        # Export as raw PCM (use s16le format directly instead of raw with codec)
         pcm_io = io.BytesIO()
-        audio.export(pcm_io, format='raw', codec='pcm_s16le')
+        audio.export(pcm_io, format='s16le')
 
         return pcm_io.getvalue()
 
