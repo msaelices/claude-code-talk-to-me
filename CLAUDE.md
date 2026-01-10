@@ -32,8 +32,8 @@ uv run python3 test-audio.py
 ### Environment Configuration
 Copy `.env.example` to `.env.local` and configure:
 - Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
-- TTS provider (TALKTOME_TTS_PROVIDER: piper or openai)
-- STT provider (TALKTOME_STT_PROVIDER: whisper or openai)
+- TTS provider (TALKTOME_TTS_PROVIDER: piper or elevenlabs)
+- STT provider (TALKTOME_STT_PROVIDER: whisper)
 - Model paths and performance settings (WHISPER_MODEL, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE)
 
 ## Architecture
@@ -41,8 +41,8 @@ Copy `.env.example` to `.env.local` and configure:
 ### Provider Pattern
 The codebase uses abstract provider interfaces in `server/talktome_mcp/providers/base.py`:
 - **PhoneProvider**: Abstract audio I/O interface (LocalPhoneProvider for system audio)
-- **TTSProvider**: Abstract text-to-speech (PiperTTSProvider for local, OpenAITTSProvider for cloud)
-- **STTProvider**: Abstract speech-to-text (WhisperSTTProvider for local, OpenAISTTProvider for cloud)
+- **TTSProvider**: Abstract text-to-speech (PiperTTSProvider for local, ElevenLabsTTSProvider for cloud)
+- **STTProvider**: Abstract speech-to-text (WhisperSTTProvider for local)
 - **RealtimeSTTProvider**: Extends STTProvider for streaming audio with VAD (Voice Activity Detection)
 
 Provider selection happens in `server.py` based on environment variables (`TALKTOME_TTS_PROVIDER`, `TALKTOME_STT_PROVIDER`).

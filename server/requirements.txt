@@ -15,9 +15,6 @@ torch>=2.0.0
 # Voice Activity Detection
 silero-vad>=5.0
 
-# OpenAI Integration (optional)
-openai>=1.0.0
-
 # Async utilities
 asyncio-throttle>=1.0.2
 
