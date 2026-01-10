@@ -154,7 +154,7 @@ except Exception as e:
     test_script.chmod(0o755)
 
     print(f"\nCreated test script: {test_script}")
-    print("Run it to download the model: python3 test-whisper-download.py")
+    print("Run it to download the model: uv run python3 test-whisper-download.py")
 
     return model_name
 
@@ -272,13 +272,13 @@ def main():
 
     if whisper_model:
         print(f"\nWhisper model selected: {whisper_model}")
-        print("Run 'python3 test-whisper-download.py' to download it")
+        print("Run 'uv run python3 test-whisper-download.py' to download it")
 
     if piper_voice:
         print(f"\nPiper voice downloaded: {piper_voice}")
 
     print("\nNext steps:")
-    print("1. Test audio setup: python3 test-audio.py")
+    print("1. Test audio setup: uv run python3 test-audio.py")
     print("2. Configure environment: cp .env.example .env.local")
     print("3. Run the local mode: cd server && bun run dev")
 

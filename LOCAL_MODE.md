@@ -49,11 +49,8 @@ This will:
 ### 2. Download Models
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
-
 # Download models
-python3 download-models.py
+uv run python3 download-models.py
 ```
 
 Choose:
@@ -64,7 +61,7 @@ Choose:
 
 ```bash
 # Test audio devices and TTS/STT
-python3 test-audio.py
+uv run python3 test-audio.py
 ```
 
 This will:
@@ -202,13 +199,13 @@ arecord -d 5 test.wav && aplay test.wav
 ```bash
 # Re-download the model
 rm -rf ~/.cache/huggingface/hub/models--Systran--faster-whisper-*
-python3 test-whisper-download.py
+uv run python3 test-whisper-download.py
 ```
 
 ### Piper Voice Not Found
 ```bash
 # Re-download voices
-python3 download-models.py
+uv run python3 download-models.py
 ```
 
 ### High CPU Usage
@@ -244,8 +241,8 @@ CALLME_PIPER_MODEL_PATH=models/piper/en_US-lessac-medium.onnx
 For NVIDIA GPUs:
 ```bash
 # Install CUDA-enabled faster-whisper
-pip install nvidia-cublas-cu11 nvidia-cudnn-cu11
-pip install faster-whisper --upgrade
+uv pip install nvidia-cublas-cu11 nvidia-cudnn-cu11
+uv pip install faster-whisper --upgrade
 
 # Configure for GPU
 echo "CALLME_WHISPER_DEVICE=cuda" >> .env.local
