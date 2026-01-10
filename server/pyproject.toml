@@ -16,7 +16,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-openai = ["openai>=1.0.0"]
 elevenlabs = ["aiohttp>=3.9.0"]
 
 [build-system]

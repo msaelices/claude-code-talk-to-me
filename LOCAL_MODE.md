@@ -255,8 +255,8 @@ Use local STT with cloud TTS for best quality:
 ```env
 CALLME_LOCAL_MODE=true
 CALLME_STT_PROVIDER=whisper
-CALLME_TTS_PROVIDER=openai
-CALLME_OPENAI_API_KEY=sk-xxx
+CALLME_TTS_PROVIDER=elevenlabs
+CALLME_ELEVENLABS_API_KEY=your_api_key_here
 ```
 
 ## Contributing

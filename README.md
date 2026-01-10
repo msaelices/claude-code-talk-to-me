@@ -6,7 +6,7 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 
 <img src="./static/taxi-driver.jpg" width="800" alt="TalkToMe - Voice conversations with Claude">
 
-- **Zero cost** - No phone charges, no API costs for communication (only optional OpenAI for better quality)
+- **Zero cost** - No phone charges, no API costs for communication (optional ElevenLabs available)
 - **Privacy-first** - All audio processing can happen locally on your machine
 - **Multi-turn conversations** - Talk through decisions naturally
 - **Low latency** - Direct audio I/O without network delays
@@ -16,8 +16,8 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 
 ## Features
 
-- 🎙️ **Local Speech-to-Text** using Whisper (or OpenAI)
-- 🔊 **Text-to-Speech** using Piper neural TTS (local), ElevenLabs (cloud), or OpenAI (cloud)
+- 🎙️ **Local Speech-to-Text** using Whisper
+- 🔊 **Text-to-Speech** using Piper neural TTS (local) or ElevenLabs (cloud)
 - 🎧 **System Audio Integration** - Works with PulseAudio, PipeWire, or ALSA
 - 💻 **Cross-Platform** - Linux support (Windows/Mac with modifications)
 - 🔒 **Privacy** - All processing can be done locally without cloud services
@@ -103,7 +103,7 @@ TALKTOME_TTS_PROVIDER=piper
 # Speaking speed (0.5 = very fast, 1.0 = normal, 1.5 = slow)
 TALKTOME_PIPER_SPEED=0.85
 
-# STT provider (whisper for local, openai for cloud)
+# STT provider (whisper for local)
 TALKTOME_STT_PROVIDER=whisper
 
 # Whisper model (tiny, base, small, medium, large-v3)
@@ -118,6 +118,13 @@ TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
 ```bash
 cd server
 uv pip install -e .
+```
+
+**Optional dependencies** - For cloud TTS support:
+
+```bash
+# Install ElevenLabs provider (for ElevenLabs TTS)
+uv pip install -e ".[elevenlabs]"
 ```
 
 ### 7. Install in Claude Code
@@ -400,10 +407,8 @@ TALKTOME_WHISPER_DEVICE=cuda  # If you have NVIDIA GPU
 - No cloud API costs
 - All processing on your machine
 
-**Optional Cloud Mode** (if using ElevenLabs or OpenAI):
+**Optional Cloud Mode** (if using ElevenLabs):
 - **ElevenLabs TTS**: ~$0.30/min (Starter plan)
-- **OpenAI TTS**: ~$0.02/min
-- **OpenAI STT**: ~$0.006/min
 
 ---
 
