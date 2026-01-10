@@ -6,13 +6,20 @@
 set -e
 
 echo "======================================"
-echo "CallMe Local Mode Prerequisites Setup"
+echo "TalkToMe Local Mode Prerequisites Setup"
 echo "======================================"
 echo ""
 
+# Check if uv is installed
+if ! command -v uv &> /dev/null; then
+    echo "Error: uv is not installed. Please install uv first:"
+    echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    exit 1
+fi
+
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
-    echo "Error: Python 3 is not installed. Please install Python 3.8+ first."
+    echo "Error: Python 3 is not installed. Please install Python 3.10+ first."
     exit 1
 fi
 
@@ -20,39 +27,33 @@ fi
 PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 echo "Found Python $PYTHON_VERSION"
 
-# Create virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-fi
-
-# Activate virtual environment
-echo "Activating virtual environment..."
-source venv/bin/activate
-
 echo ""
-echo "Installing Python packages..."
-echo "=============================="
+echo "Installing Python packages with uv..."
+echo "======================================"
 
 # Install Whisper with optimizations
 echo "Installing faster-whisper (optimized Whisper implementation)..."
-pip install --upgrade faster-whisper
+uv pip install --upgrade faster-whisper
 
 # Install Piper TTS
 echo "Installing Piper TTS..."
-pip install --upgrade piper-tts
+uv pip install --upgrade piper-tts
 
 # Install voice activity detection
 echo "Installing Silero VAD..."
-pip install --upgrade silero-vad
+uv pip install --upgrade silero-vad
 
 # Install audio libraries
 echo "Installing audio libraries..."
-pip install --upgrade sounddevice numpy scipy
+uv pip install --upgrade sounddevice numpy scipy
 
 # Optional: Install streaming support
 echo "Installing optional streaming support..."
-pip install --upgrade websockets asyncio
+uv pip install --upgrade websockets asyncio
+
+# Install MCP server dependencies
+echo "Installing MCP server dependencies..."
+cd server && uv pip install -e . && cd ..
 
 echo ""
 echo "Checking system audio dependencies..."
@@ -105,10 +106,7 @@ echo "Installation complete!"
 echo "======================================"
 echo ""
 echo "Next steps:"
-echo "1. Download Whisper model: python3 download-models.py"
-echo "2. Test audio: python3 test-audio.py"
+echo "1. Download models: uv run python3 download-models.py"
+echo "2. Test audio: uv run python3 test-audio.py"
 echo "3. Configure environment: cp .env.example .env.local"
-echo ""
-echo "To activate the virtual environment in the future:"
-echo "  source venv/bin/activate"
 echo ""
