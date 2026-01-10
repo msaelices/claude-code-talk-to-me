@@ -4,25 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TalkToMe is a Claude Code plugin (MCP server) that enables Claude to communicate via local audio - using your computer's microphone and speakers for real-time voice conversations. Written in Python 3.10+, using the FastMCP framework, and communicating via the Model Context Protocol (MCP).
+TalkToMe is a Claude Code plugin (MCP server) that enables Claude to communicate via local audio - using your computer's microphone and speakers for real-time voice conversations. Written in Python 3.10+, using the MCP SDK, and communicating via the Model Context Protocol (MCP).
 
 ## Development Commands
 
 ### Setup and Run
 ```bash
 # Install Python dependencies
-cd server && pip install -r requirements.txt
+cd server && pip install -e .
 
 # Run the MCP server
 python3 -m talktome_mcp.server
 ```
 
-### Python Environment Setup
+### Model Setup
 ```bash
-# Install prerequisites
+# Install prerequisites (system packages)
 ./install-prerequisites.sh
 
-# Download models
+# Download models (requires venv activation first)
 source venv/bin/activate
 python3 download-models.py
 
@@ -35,27 +35,35 @@ Copy `.env.example` to `.env.local` and configure:
 - Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
 - TTS provider (TALKTOME_TTS_PROVIDER: piper or openai)
 - STT provider (TALKTOME_STT_PROVIDER: whisper or openai)
-- Model paths and configurations
+- Model paths and performance settings (WHISPER_MODEL, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE)
 
 ## Architecture
 
 ### Provider Pattern
-The codebase uses abstract provider interfaces in `/server/talktome_mcp/providers/`:
-- **PhoneProvider**: Interface for audio I/O (LocalPhoneProvider for system audio)
-- **TTSProvider**: Text-to-speech (PiperTTSProvider for local)
-- **STTProvider**: Speech-to-text (WhisperSTTProvider for local)
+The codebase uses abstract provider interfaces in `server/talktome_mcp/providers/base.py`:
+- **PhoneProvider**: Abstract audio I/O interface (LocalPhoneProvider for system audio)
+- **TTSProvider**: Abstract text-to-speech (PiperTTSProvider for local, OpenAITTSProvider for cloud)
+- **STTProvider**: Abstract speech-to-text (WhisperSTTProvider for local, OpenAISTTProvider for cloud)
+- **RealtimeSTTProvider**: Extends STTProvider for streaming audio with VAD (Voice Activity Detection)
 
-Provider selection happens in `server.py` based on environment variables.
+Provider selection happens in `server.py` based on environment variables (`TALKTOME_TTS_PROVIDER`, `TALKTOME_STT_PROVIDER`).
+
+### CallManager Architecture
+`call_manager.py` orchestrates the entire audio session:
+1. Initializes phone/TTS/STT providers based on config
+2. Manages call state (active_call_id, transcript, processing flag)
+3. Runs background task `_process_incoming_audio()` that continuously streams mic audio through STT
+4. Handles transcript tracking with timestamps and roles (user/assistant)
 
 ### Audio Flow
 1. **MCP Tool Call** → `server.py` receives `initiate_call` tool request
-2. **Audio Manager** → `call_manager.py` manages audio session state
-3. **Local Audio** → `phone_local.py` handles microphone/speaker I/O using sounddevice
-4. **Audio Pipeline** → Direct audio streaming to/from system
-5. **STT/TTS** → Real-time transcription and synthesis
+2. **CallManager** → `initiate_call()` starts the session, spawns background audio processing task
+3. **LocalPhoneProvider** → `phone_local.py` handles microphone/speaker I/O using sounddevice library
+4. **Audio Pipeline** → Background task streams mic audio → RealtimeSTTProvider → transcript updates
+5. **TTS Output** → `speak()` synthesizes text → sends to PhoneProvider for playback
 
 ### MCP Tools
-Defined in `/server/talktome_mcp/server.py`:
+Defined in `server/talktome_mcp/server.py`:
 - `initiate_call`: Starts an audio conversation session
 - `speak`: Speaks text through the active audio session
 - `get_transcript`: Gets the conversation transcript
@@ -65,18 +73,32 @@ Defined in `/server/talktome_mcp/server.py`:
 ## Key Implementation Details
 
 ### Audio Format
-- System audio: 16-bit PCM, 16kHz mono (recording)
+- System audio (recording): 16-bit PCM, 16kHz mono
 - TTS output: 16-bit PCM, 22-24kHz mono
 - STT input: 16-bit PCM, 16kHz mono
 
+### RealtimeSTTProvider Streaming
+The WhisperSTTProvider implements streaming transcription:
+- `start_stream()`: Initializes Whisper model and VAD
+- `process_audio_chunk()`: Processes audio chunks, returns transcribed text when silence is detected
+- `get_final_transcription()`: Returns any remaining buffered transcription
+- Uses `TALKTOME_STT_SILENCE_DURATION_MS` (default 800ms) to detect speech end
+
+### CallManager Lifecycle
+- Only one active call at a time (tracked by `active_call_id`)
+- Transcript persists until `end_call()` is called
+- Background audio processing task runs continuously while call is active
+- `processing_audio` flag prevents concurrent audio processing
+
 ### Provider-Specific Details
-- **Piper TTS**: Uses ONNX models for fast neural synthesis (runs as Python module)
-- **Whisper STT**: Uses faster-whisper library directly in Python
-- **Local Audio**: Uses sounddevice library for cross-platform audio I/O
+- **Piper TTS**: Uses ONNX models for fast neural synthesis (runs as Python module via piper-tts package)
+- **Whisper STT**: Uses faster-whisper library directly in Python (not subprocess)
+- **Local Audio**: Uses sounddevice library for cross-platform audio I/O (PortAudio wrapper)
 
 ## Important Notes
 
 - Python 3.10+ required (for MCP SDK and async features)
-- Uses FastMCP framework for MCP server implementation
+- Uses MCP SDK (mcp>=1.0.0) with FastMCP-like pattern
 - Direct Python integration with Whisper and Piper (no subprocesses)
 - Logging goes to stderr (stdout is reserved for MCP communication)
+- Models are cached in `~/.cache/huggingface/hub/` (Whisper) and local `models/` directory (Piper)
