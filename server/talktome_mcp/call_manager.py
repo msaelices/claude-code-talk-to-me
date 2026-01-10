@@ -132,12 +132,13 @@ class CallManager:
             if hasattr(self.tts_provider, 'synthesize_stream'):
                 async for audio_chunk in self.tts_provider.synthesize_stream(text):
                     await self.phone_provider.send_audio(self.active_call_id, audio_chunk)
+                    # Wait for this chunk to finish playing before sending the next one
+                    # This prevents chunks from piling up and playing in parallel
+                    await self.phone_provider.wait_for_playback_complete(self.active_call_id, timeout=5.0)
             else:
                 audio = await self.tts_provider.synthesize(text)
                 await self.phone_provider.send_audio(self.active_call_id, audio)
-
-            # Wait for playback to complete before resuming recording
-            await self.phone_provider.wait_for_playback_complete(self.active_call_id)
+                await self.phone_provider.wait_for_playback_complete(self.active_call_id)
 
             # Resume recording after speech completes
             await self.phone_provider.resume_recording(self.active_call_id)
