@@ -21,11 +21,10 @@ uv run -m talktome_mcp.server
 
 ### Prerequisites
 ```bash
-# Install system audio dependencies
-./install-prerequisites.sh
-
-# Test audio system
-uv run python3 test-audio.py
+# Install ffmpeg (required for audio conversion)
+# Linux (Ubuntu/Debian): sudo apt-get install ffmpeg
+# Linux (Fedora): sudo dnf install ffmpeg
+# macOS: brew install ffmpeg
 ```
 
 ### Code Quality
@@ -81,7 +80,9 @@ Provider selection happens in `server.py` based on environment variables (`TALKT
 ### MCP Tools
 Defined in `server/talktome_mcp/server.py`:
 - `initiate_call`: Starts an audio conversation session
-- `speak`: Speaks text through the active audio session
+- `continue_call`: Continues conversation with follow-up message, waits for response
+- `speak`: Speaks text through the active audio session (non-blocking)
+- `report_completion`: Reports task completion via voice, waits for next instruction
 - `get_transcript`: Gets the conversation transcript
 - `end_call`: Terminates the active audio session
 - `test_audio`: Tests audio system components
