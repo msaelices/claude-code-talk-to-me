@@ -174,6 +174,39 @@ Or add them to your Claude Code settings file (`~/.claude/settings.json`):
 - While waiting for permission, the voice output won't reach you
 - This creates awkward pauses and breaks the natural conversation flow
 
+**For truly hands-free operation**, consider running Claude Code in "YOLO mode":
+
+```bash
+claude --dangerously-skip-permissions
+```
+
+This skips all permission prompts, allowing Claude to work autonomously while you're away from the computer. Since TalkToMe is designed for scenarios where you step away, any permission prompt would leave the agent stuck without you noticing. YOLO mode ensures uninterrupted operation.
+
+> ⚠️ **Warning**: Only use `--dangerously-skip-permissions` if you trust the tasks you're asking Claude to perform. Review your project's security considerations first.
+
+**Alternative: Sound notification hook**
+
+If you prefer not to use YOLO mode, you can create a hook that plays a sound when Claude needs input. This way, you'll hear an alert even when away from your desk:
+
+```json
+// In ~/.claude/settings.json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "paplay /usr/share/sounds/freedesktop/stereo/bell.oga"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### 9. (Optional) Add the Skill for Better Claude Integration
 
 The TalkToMe skill provides Claude with built-in instructions on when and how to use voice communication effectively.
