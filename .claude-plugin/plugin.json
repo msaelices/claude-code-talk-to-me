@@ -1,6 +1,6 @@
 {
   "name": "talktome",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Claude communicates with you through your computer's microphone and speakers for real-time voice conversations",
   "author": {
     "name": "TalkToMe Contributors",
@@ -8,22 +8,20 @@
   },
   "repository": "https://github.com/msaelices/claude-code-talk-to-me",
   "license": "MIT",
-  "keywords": ["voice", "audio", "microphone", "speech", "local", "tts", "stt"],
+  "keywords": ["voice", "audio", "microphone", "speech", "tts", "stt", "elevenlabs"],
   "skills": "./skills",
   "mcpServers": {
     "talktome": {
       "command": "bash",
-      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT} && pip install -e server/. --quiet 2>/dev/null; python3 setup-plugin.py 2>&1 >/dev/null; cd server && python3 -m talktome_mcp.server"],
+      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT} && pip install -e server/. --quiet 2>/dev/null; cd server && python3 -m talktome_mcp.server"],
       "env": {
-        "TALKTOME_AUDIO_SYSTEM": "${TALKTOME_AUDIO_SYSTEM:-pulseaudio}",
-        "TALKTOME_TTS_PROVIDER": "${TALKTOME_TTS_PROVIDER:-piper}",
-        "TALKTOME_STT_PROVIDER": "${TALKTOME_STT_PROVIDER:-whisper}",
-        "TALKTOME_PIPER_VOICE": "${TALKTOME_PIPER_VOICE:-en_US-amy-medium}",
-        "TALKTOME_PIPER_MODEL_PATH": "${TALKTOME_PIPER_MODEL_PATH:-models/piper/en_US-amy-medium.onnx}",
-        "TALKTOME_WHISPER_MODEL": "${TALKTOME_WHISPER_MODEL:-base}",
-        "TALKTOME_WHISPER_DEVICE": "${TALKTOME_WHISPER_DEVICE:-auto}",
-        "TALKTOME_WHISPER_COMPUTE_TYPE": "${TALKTOME_WHISPER_COMPUTE_TYPE:-auto}",
-        "TALKTOME_PORT": "${TALKTOME_PORT:-3000}",
+        "TALKTOME_ELEVENLABS_API_KEY": "${TALKTOME_ELEVENLABS_API_KEY}",
+        "TALKTOME_TTS_PROVIDER": "${TALKTOME_TTS_PROVIDER:-elevenlabs}",
+        "TALKTOME_STT_PROVIDER": "${TALKTOME_STT_PROVIDER:-elevenlabs}",
+        "TALKTOME_ELEVENLABS_VOICE_ID": "${TALKTOME_ELEVENLABS_VOICE_ID:-21m00Tcm4TlvDq8ikWAM}",
+        "TALKTOME_ELEVENLABS_MODEL_ID": "${TALKTOME_ELEVENLABS_MODEL_ID:-eleven_multilingual_v2}",
+        "TALKTOME_ELEVENLABS_STT_MODEL": "${TALKTOME_ELEVENLABS_STT_MODEL:-scribe_v2_realtime}",
+        "TALKTOME_ELEVENLABS_LANGUAGE": "${TALKTOME_ELEVENLABS_LANGUAGE:-en}",
         "TALKTOME_STT_SILENCE_DURATION_MS": "${TALKTOME_STT_SILENCE_DURATION_MS:-800}"
       }
     }

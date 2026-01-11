@@ -32,9 +32,6 @@ Edit `.env.local` with your ElevenLabs API key:
 # Required: Your ElevenLabs API key
 TALKTOME_ELEVENLABS_API_KEY=your_api_key_here
 
-# Audio system (pulseaudio, pipewire, or alsa)
-TALKTOME_AUDIO_SYSTEM=pulseaudio
-
 # TTS configuration
 TALKTOME_TTS_PROVIDER=elevenlabs
 TALKTOME_ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
@@ -82,7 +79,6 @@ Add to `~/.config/claude-code/config.json`:
       ],
       "env": {
         "TALKTOME_ELEVENLABS_API_KEY": "your_api_key_here",
-        "TALKTOME_AUDIO_SYSTEM": "pulseaudio",
         "TALKTOME_TTS_PROVIDER": "elevenlabs",
         "TALKTOME_STT_PROVIDER": "elevenlabs"
       }

@@ -50,7 +50,6 @@ Pre-commit hooks run automatically on `git commit` and include:
 ### Environment Configuration
 Copy `.env.example` to `.env.local` and configure:
 - **Required**: TALKTOME_ELEVENLABS_API_KEY (get from https://elevenlabs.io)
-- Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
 - TTS settings (voice ID, model, stability)
 - STT settings (model, language, VAD parameters)
 
