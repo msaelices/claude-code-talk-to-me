@@ -75,9 +75,19 @@ TALKTOME_ELEVENLABS_API_KEY=your_api_key_here
 
 ### 5. Configure Permissions
 
+Add the MCP tool permissions to your Claude Code project settings file (`.claude/settings.json`):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_talktome_talktome__*"
+    ]
+  }
+}
 ```
-/allowed-tools mcp__talktome__*
-```
+
+If you already have other permissions configured, just add `"mcp__plugin_talktome_talktome__*"` to the existing `allow` array.
 
 That's it! Ask Claude to use TalkToMe and start talking.
 
