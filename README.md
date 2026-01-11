@@ -57,31 +57,7 @@ This installs:
 - **piper-tts** - Fast neural text-to-speech
 - **sounddevice** - Audio I/O library
 
-### 3. Download Models
-
-```bash
-# Download models interactively
-uv run python3 download-models.py
-```
-
-Choose:
-- **Whisper model**: `base` (recommended - good balance of speed/accuracy)
-- **Piper voice**: `en_US-amy-medium` (recommended - natural female voice)
-
-### 4. Test Your Audio
-
-```bash
-# Test audio devices and models
-uv run python3 test-audio.py
-```
-
-This will:
-- List available audio devices
-- Test microphone recording
-- Test speaker playback
-- Verify TTS and STT are working
-
-### 5. Configure Environment
+### 3. Configure Environment (Optional)
 
 ```bash
 # Copy the example configuration
@@ -112,11 +88,11 @@ TALKTOME_WHISPER_MODEL=base
 TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
 ```
 
-### 6. Install in Claude Code
+### 4. Install in Claude Code
 
 Add the MCP server to your Claude Code configuration (`~/.config/claude-code/config.json`).
 
-> **Note**: Python dependencies are automatically installed when the MCP server starts, so no manual `pip install` is required.
+> **Note**: Python dependencies and models are automatically installed when the MCP server starts. The first startup may take a few minutes to download models (~140 MB for default configuration).
 
 ```json
 {
@@ -143,7 +119,7 @@ Add the MCP server to your Claude Code configuration (`~/.config/claude-code/con
 
 Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository.
 
-### 7. Configure Permissions for Natural Conversations
+### 5. Configure Permissions for Natural Conversations
 
 **Important**: For natural voice conversations, you need to allow TalkToMe tools to run without permission prompts. Otherwise, Claude will pause to ask for permission instead of speaking, breaking the conversation flow.
 
@@ -204,7 +180,7 @@ If you prefer not to use YOLO mode, you can create a hook that plays a sound whe
 }
 ```
 
-### 8. (Optional) Add the Skill for Better Claude Integration
+### 6. (Optional) Add the Skill for Better Claude Integration
 
 The TalkToMe skill provides Claude with built-in instructions on when and how to use voice communication effectively.
 
@@ -227,7 +203,7 @@ cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/
 - Provides usage examples and conversation patterns
 - Ensures Claude uses voice tools appropriately during active calls
 
-### 9. Run the Server (for testing)
+### 7. (Optional) Run the Server for Testing
 
 ```bash
 uv run -m talktome_mcp.server
@@ -413,6 +389,15 @@ result = await end_call()
 ---
 
 ## Configuration Options
+
+### Model Auto-Download
+
+Models are automatically downloaded on first startup. Configure which models to use via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TALKTOME_PIPER_VOICE` | `en_US-amy-medium` | Piper TTS voice to download |
+| `TALKTOME_WHISPER_MODEL` | `base` | Whisper STT model to download |
 
 ### Whisper STT Models
 
