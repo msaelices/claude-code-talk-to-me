@@ -38,7 +38,7 @@ TALKTOME_ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 
 # STT configuration
 TALKTOME_STT_PROVIDER=elevenlabs
-TALKTOME_ELEVENLABS_STT_MODEL=scribe_v2_realtime
+TALKTOME_ELEVENLABS_STT_MODEL=scribe_v2
 ```
 
 ### Run the Server

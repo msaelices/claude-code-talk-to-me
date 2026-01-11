@@ -300,7 +300,7 @@ result = await end_call()
 | `TALKTOME_STT_PROVIDER` | `elevenlabs` | STT provider |
 | `TALKTOME_ELEVENLABS_VOICE_ID` | `21m00Tcm4TlvDq8ikWAM` | Voice to use (Rachel) |
 | `TALKTOME_ELEVENLABS_MODEL_ID` | `eleven_multilingual_v2` | TTS model |
-| `TALKTOME_ELEVENLABS_STT_MODEL` | `scribe_v2_realtime` | STT model |
+| `TALKTOME_ELEVENLABS_STT_MODEL` | `scribe_v2` | STT model |
 
 ### Voice Options
 
