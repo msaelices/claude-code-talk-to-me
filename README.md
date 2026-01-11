@@ -400,19 +400,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ---
 
-## Privacy & Data
-
-TalkToMe uses cloud services for speech processing:
-
-- **Audio data** is sent to ElevenLabs for processing
-- ElevenLabs privacy policy applies: https://elevenlabs.io/privacy
-- No audio is stored locally by TalkToMe
-- Conversation transcripts are kept in memory only (cleared on restart)
-
-If you need fully local/private processing, consider the older v2.x releases which supported local Whisper/Piper models.
-
----
-
 ## License
 
 MIT
