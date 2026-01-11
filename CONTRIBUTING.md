@@ -4,21 +4,9 @@ This guide covers development setup, debugging, and how to contribute to TalkToM
 
 ## Development Setup
 
-### 1. Install System Requirements
+First, install system dependencies as described in the [README](README.md#1-install-system-dependencies-required).
 
-**Linux** (Ubuntu/Debian/Fedora):
-```bash
-# Install audio system
-sudo apt-get install pulseaudio-utils  # Or pipewire-pulse for PipeWire
-
-# Install Python 3.10+
-sudo apt-get install python3 python3-pip
-
-# Install ffmpeg (for audio format conversion)
-sudo apt-get install ffmpeg
-```
-
-### 2. Clone and Install Dependencies
+### Clone and Install Dependencies
 
 ```bash
 # Clone the repository
@@ -33,7 +21,7 @@ pip install -e .
 uv pip install -e .
 ```
 
-### 3. Download Models
+### Download Models
 
 ```bash
 # Interactive model download
@@ -44,7 +32,7 @@ Or download manually:
 - **Whisper**: Auto-downloads on first use to `~/.cache/huggingface/hub/`
 - **Piper**: Download to `models/piper/` from [Hugging Face](https://huggingface.co/rhasspy/piper-voices)
 
-### 4. Configure Environment
+### Configure Environment
 
 ```bash
 cp .env.example .env.local
@@ -67,7 +55,7 @@ TALKTOME_WHISPER_MODEL=base
 TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
 ```
 
-### 5. Run the Server
+### Run the Server
 
 ```bash
 cd server
