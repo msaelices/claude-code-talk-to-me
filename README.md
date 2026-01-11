@@ -26,164 +26,72 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 
 ## Quick Start
 
-### 1. Install System Requirements
+### 1. Install System Dependencies (Required)
 
-**Linux** (Ubuntu/Debian/Fedora):
+TalkToMe requires audio and Python packages that must be installed via your system package manager:
+
+**Ubuntu/Debian:**
 ```bash
-# Install audio system (if not already present)
-sudo apt-get install pulseaudio-utils  # Or pipewire-pulse for PipeWire
-
-# Install Python 3.10+ and uv
-sudo apt-get install python3
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install ffmpeg (optional, for audio format conversion)
-sudo apt-get install ffmpeg
+sudo apt-get install pulseaudio-utils python3 python3-pip ffmpeg
 ```
 
-### 2. Install Python Dependencies
-
+**Fedora:**
 ```bash
-# Clone the repository
-git clone https://github.com/msaelices/claude-code-talk-to-me.git
-cd claude-code-talk-to-me
-
-# Run the installation script
-./install-prerequisites.sh
+sudo dnf install pulseaudio-utils python3 python3-pip ffmpeg
 ```
 
-This installs:
-- **faster-whisper** - Optimized Whisper for speech recognition
-- **piper-tts** - Fast neural text-to-speech
-- **sounddevice** - Audio I/O library
-
-### 3. Download Models
-
+**Arch Linux:**
 ```bash
-# Download models interactively
-uv run python3 download-models.py
+sudo pacman -S pulseaudio python python-pip ffmpeg
 ```
 
-Choose:
-- **Whisper model**: `base` (recommended - good balance of speed/accuracy)
-- **Piper voice**: `en_US-amy-medium` (recommended - natural female voice)
+### 2. Install via Claude Code Marketplace
 
-### 4. Test Your Audio
+```
+/plugin marketplace add msaelices/claude-code-talk-to-me
+/plugin install talktome@msaelices
+```
+
+> **Note**: First startup downloads models (~140 MB). Subsequent starts are instant.
+
+### 3. (Optional) Configure Models
+
+Before starting Claude, you can set environment variables to choose different models:
 
 ```bash
-# Test audio devices and models
-uv run python3 test-audio.py
+export TALKTOME_WHISPER_MODEL=small      # Default: base (options: tiny, base, small, medium, large-v3)
+export TALKTOME_PIPER_VOICE=en_US-danny-low  # Default: en_US-amy-medium
 ```
 
-This will:
-- List available audio devices
-- Test microphone recording
-- Test speaker playback
-- Verify TTS and STT are working
+Skip this step to use the recommended defaults.
 
-### 5. Configure Environment
+### 4. Configure Permissions
 
-```bash
-# Copy the example configuration
-cp .env.example .env.local
-
-# Edit with your preferences (or use defaults)
-nano .env.local
 ```
-
-Basic configuration (defaults work for most):
-```env
-# Audio system (pulseaudio, pipewire, or alsa)
-TALKTOME_AUDIO_SYSTEM=pulseaudio
-
-# TTS provider (piper for local, elevenlabs for cloud)
-TALKTOME_TTS_PROVIDER=piper
-
-# Speaking speed (0.5 = very fast, 1.0 = normal, 1.5 = slow)
-TALKTOME_PIPER_SPEED=0.85
-
-# STT provider (whisper for local)
-TALKTOME_STT_PROVIDER=whisper
-
-# Whisper model (tiny, base, small, medium, large-v3)
-TALKTOME_WHISPER_MODEL=base
-
-# Timeout for waiting for user speech in milliseconds (default: 180000 = 3 minutes)
-TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
-```
-
-### 6. Install in Claude Code
-
-Add the MCP server to your Claude Code configuration (`~/.config/claude-code/config.json`).
-
-> **Note**: Python dependencies are automatically installed when the MCP server starts, so no manual `pip install` is required.
-
-```json
-{
-  "mcpServers": {
-    "talktome": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/claude-code-talk-to-me/server",
-        "-m",
-        "talktome_mcp.server"
-      ],
-      "env": {
-        "TALKTOME_AUDIO_SYSTEM": "pulseaudio",
-        "TALKTOME_TTS_PROVIDER": "piper",
-        "TALKTOME_STT_PROVIDER": "whisper",
-        "TALKTOME_WHISPER_MODEL": "base"
-      }
-    }
-  }
-}
-```
-
-Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository.
-
-### 7. Configure Permissions for Natural Conversations
-
-**Important**: For natural voice conversations, you need to allow TalkToMe tools to run without permission prompts. Otherwise, Claude will pause to ask for permission instead of speaking, breaking the conversation flow.
-
-Add the TalkToMe tools to your allowed tools list. You can do this by running this command in Claude Code:
-
-```bash
-# Allow all TalkToMe MCP tools using wildcard
 /allowed-tools mcp__talktome__*
 ```
 
-Or add them to your Claude Code settings file (`~/.claude/settings.json`):
+That's it! Ask Claude to use TalkToMe and start talking.
 
-```json
-{
-  "allowedTools": [
-    "mcp__talktome__*"
-  ]
-}
-```
+> **Having issues?** See [CONTRIBUTING.md](CONTRIBUTING.md) for manual installation and debugging.
 
-**Why is this needed?**
-- Without auto-approval, Claude will ask for permission before each voice tool call
-- While waiting for permission, the voice output won't reach you
-- This creates awkward pauses and breaks the natural conversation flow
+---
 
-Even after allowing the MCP tools, Claude may still ask for permission for specific actions if your overall settings are restrictive. To ensure smooth operation, consider the following options:
+## Permissions & Hands-Free Operation
 
-**For truly hands-free operation**, consider running Claude Code in "YOLO mode":
+For natural voice conversations, TalkToMe tools need to run without permission prompts.
+
+**For truly hands-free operation**, run Claude Code in "YOLO mode":
 
 ```bash
 claude --dangerously-skip-permissions
 ```
 
-This skips all permission prompts, allowing Claude to work autonomously while you're away from the computer. Since TalkToMe is designed for scenarios where you step away, any permission prompt would leave the agent stuck without you noticing. YOLO mode ensures uninterrupted operation.
-
-> ⚠️ **Warning**: Only use `--dangerously-skip-permissions` if you trust the tasks you're asking Claude to perform. Review your project's security considerations first.
+> ⚠️ **Warning**: Only use this if you trust the tasks you're asking Claude to perform.
 
 **Alternative: Sound notification hook**
 
-If you prefer not to use YOLO mode, you can create a hook that plays a sound when Claude needs input. This way, you'll hear an alert even when away from your desk:
+Play a sound when Claude needs input:
 
 ```json
 // In ~/.claude/settings.json
@@ -202,45 +110,6 @@ If you prefer not to use YOLO mode, you can create a hook that plays a sound whe
     ]
   }
 }
-```
-
-### 8. (Optional) Add the Skill for Better Claude Integration
-
-The TalkToMe skill provides Claude with built-in instructions on when and how to use voice communication effectively.
-
-```bash
-# Create the skills directory if it doesn't exist
-mkdir -p ~/.claude/skills
-
-# Symlink the skill (recommended)
-ln -s /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/talk-to-me
-```
-
-Or copy the skill directly:
-```bash
-cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/
-```
-
-**Why add the skill?**
-- Claude learns best practices for voice-first communication
-- Includes instructions on when to use `speak` vs `continue_call` vs `report_completion`
-- Provides usage examples and conversation patterns
-- Ensures Claude uses voice tools appropriately during active calls
-
-### 9. Run the Server (for testing)
-
-```bash
-uv run -m talktome_mcp.server
-```
-
-You should see:
-```
-TalkToMe MCP server ready (Local Mode)
-Audio: local
-TTS: piper
-STT: whisper
-
-Microphone and speakers ready for communication
 ```
 
 ---
@@ -414,6 +283,15 @@ result = await end_call()
 
 ## Configuration Options
 
+### Model Auto-Download
+
+Models are automatically downloaded on first startup. Configure which models to use via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TALKTOME_PIPER_VOICE` | `en_US-amy-medium` | Piper TTS voice to download |
+| `TALKTOME_WHISPER_MODEL` | `base` | Whisper STT model to download |
+
 ### Whisper STT Models
 
 | Model | Size | Accuracy | Speed | Use Case |
@@ -548,17 +426,12 @@ echo "TALKTOME_PIPER_MODEL_PATH=models/piper/en_US-lessac-medium.onnx" >> .env.l
 
 ## Development
 
-```bash
-cd server
-pip install -e .  # Install dependencies (auto-installed when running as plugin)
-uv run -m talktome_mcp.server    # Run the server
-```
-
-To add new TTS/STT providers:
-1. Create provider in `server/talktome_mcp/providers/`
-2. Implement the provider interface in `providers/base.py`
-3. Update `providers/__init__.py`
-4. Add configuration to `.env.example`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup
+- Manual installation for debugging
+- Testing and debugging guides
+- How to add new TTS/STT providers
+- Code style and PR process
 
 ---
 

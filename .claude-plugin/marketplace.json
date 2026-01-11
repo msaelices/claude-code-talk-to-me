@@ -1,12 +1,17 @@
 {
-  "name": "talktome",
+  "name": "msaelices",
   "owner": {
-    "name": "TalkToMe Contributors"
+    "name": "Manuel Saelices",
+    "email": "msaelices@gmail.com"
   },
+  "description": "Claude Code plugins for local voice communication",
   "plugins": [
     {
       "name": "talktome",
-      "source": "./"
+      "source": "./",
+      "description": "Local voice communication using microphone and speakers for real-time conversations with Claude",
+      "version": "2.0.0",
+      "category": "Communication"
     }
   ]
 }
