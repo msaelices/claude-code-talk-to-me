@@ -1,12 +1,13 @@
 """ElevenLabs providers for cloud-based text-to-speech and speech-to-text."""
 
 import asyncio
-import base64
 import io
-import json
 import logging
 import os
 from typing import Any, Dict, Optional
+
+import numpy as np
+from elevenlabs.client import ElevenLabs
 
 from .base import RealtimeSTTProvider, TTSProvider
 
@@ -124,8 +125,8 @@ class ElevenLabsTTSProvider(TTSProvider):
 class ElevenLabsSTTProvider(RealtimeSTTProvider):
     """ElevenLabs STT provider for real-time cloud speech recognition.
 
-    Uses the ElevenLabs WebSocket API for streaming speech-to-text with
-    Voice Activity Detection (VAD) for automatic speech end detection.
+    Uses the ElevenLabs Python SDK with local Voice Activity Detection (VAD)
+    to detect speech segments and transcribe them via the batch API.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -140,39 +141,45 @@ class ElevenLabsSTTProvider(RealtimeSTTProvider):
                 "ELEVENLABS_API_KEY environment variable, or pass api_key in config."
             )
 
+        # Initialize ElevenLabs client
+        self.client = ElevenLabs(api_key=self.api_key)
+
         # Model configuration
-        self.model_id = config.get("model_id", os.getenv("TALKTOME_ELEVENLABS_STT_MODEL", "scribe_v2_realtime"))
+        self.model_id = config.get("model_id", os.getenv("TALKTOME_ELEVENLABS_STT_MODEL", "scribe_v2"))
         self.language_code = config.get("language_code", os.getenv("TALKTOME_ELEVENLABS_LANGUAGE", "en"))
 
-        # VAD configuration
-        self.vad_silence_threshold = config.get(
-            "vad_silence_threshold",
-            float(os.getenv("TALKTOME_STT_SILENCE_DURATION_MS", "800")) / 1000.0,  # Convert ms to seconds
+        # VAD configuration for local speech detection
+        self.energy_threshold = config.get(
+            "energy_threshold", float(os.getenv("TALKTOME_STT_ENERGY_THRESHOLD", "0.01"))
         )
-        self.vad_threshold = config.get("vad_threshold", float(os.getenv("TALKTOME_STT_VAD_THRESHOLD", "0.4")))
+        self.silence_duration_ms = config.get(
+            "silence_duration_ms", int(os.getenv("TALKTOME_STT_SILENCE_DURATION_MS", "800"))
+        )
         self.min_speech_duration_ms = config.get(
             "min_speech_duration_ms", int(os.getenv("TALKTOME_STT_MIN_SPEECH_MS", "250"))
-        )
-        self.min_silence_duration_ms = config.get(
-            "min_silence_duration_ms", int(os.getenv("TALKTOME_STT_MIN_SILENCE_MS", "500"))
         )
 
         # Audio configuration - matches LocalPhoneProvider output
         self.sample_rate = 16000
+        self.bytes_per_sample = 2  # 16-bit audio
 
-        # WebSocket state
-        self.ws = None
+        # Streaming state
         self.streaming = False
-        self.receive_task = None
-        self.transcription_buffer = []
+        self.audio_buffer = bytearray()
+        self.is_speaking = False
+        self.silence_samples = 0
+        self.speech_samples = 0
         self.pending_transcription: Optional[str] = None
-        self._transcription_event = None
+
+        # Calculate sample counts for timing
+        self.silence_samples_threshold = int(self.silence_duration_ms * self.sample_rate / 1000)
+        self.min_speech_samples = int(self.min_speech_duration_ms * self.sample_rate / 1000)
 
         logger.info(f"ElevenLabs STT initialized with model: {self.model_id}")
 
     async def transcribe(self, audio: bytes) -> str:
         """
-        One-shot transcription using HTTP API.
+        One-shot transcription using the ElevenLabs SDK.
 
         Args:
             audio: Audio data as bytes (PCM 16-bit, 16kHz mono)
@@ -180,102 +187,53 @@ class ElevenLabsSTTProvider(RealtimeSTTProvider):
         Returns:
             Transcribed text
         """
-        import aiohttp
-
-        url = "https://api.elevenlabs.io/v1/speech-to-text"
-
-        headers = {"xi-api-key": self.api_key}
-
-        # Create form data with audio file
-        form_data = aiohttp.FormData()
-        form_data.add_field("file", audio, filename="audio.pcm", content_type="audio/pcm")
-        form_data.add_field("model_id", self.model_id)
-        if self.language_code:
-            form_data.add_field("language_code", self.language_code)
+        if not audio or len(audio) < 1000:
+            return ""
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, data=form_data, headers=headers) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        raise RuntimeError(f"ElevenLabs STT API error (status {response.status}): {error_text}")
+            # Convert PCM to WAV format for the API
+            wav_data = self._pcm_to_wav(audio)
 
-                    result = await response.json()
-                    return result.get("text", "")
+            # Run transcription in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            transcription = await loop.run_in_executor(
+                None,
+                lambda: self.client.speech_to_text.convert(
+                    file=io.BytesIO(wav_data),
+                    model_id=self.model_id,
+                    language_code=self.language_code if self.language_code else None,
+                ),
+            )
 
-        except aiohttp.ClientError as e:
-            logger.error(f"ElevenLabs STT request failed: {e}")
-            raise RuntimeError(f"ElevenLabs STT request failed: {e}")
-
-    async def start_stream(self) -> None:
-        """Start WebSocket streaming connection for real-time transcription."""
-        import websockets
-
-        # Build WebSocket URL with query parameters
-        params = [
-            f"model_id={self.model_id}",
-            "audio_format=pcm_16000",
-            "commit_strategy=vad",  # Use VAD for automatic speech detection
-            f"vad_silence_threshold_secs={self.vad_silence_threshold}",
-            f"vad_threshold={self.vad_threshold}",
-            f"min_speech_duration_ms={self.min_speech_duration_ms}",
-            f"min_silence_duration_ms={self.min_silence_duration_ms}",
-        ]
-        if self.language_code:
-            params.append(f"language_code={self.language_code}")
-
-        url = f"wss://api.elevenlabs.io/v1/speech-to-text/realtime?{'&'.join(params)}"
-        headers = {"xi-api-key": self.api_key}
-
-        try:
-            self.ws = await websockets.connect(url, additional_headers=headers)
-            self.streaming = True
-            self.transcription_buffer = []
-            self.pending_transcription = None
-            self._transcription_event = asyncio.Event()
-
-            # Wait for session started message
-            session_msg = await asyncio.wait_for(self.ws.recv(), timeout=10.0)
-            data = json.loads(session_msg)
-            if data.get("message_type") == "session_started":
-                logger.info(f"ElevenLabs STT session started: {data}")
-            else:
-                logger.warning(f"Unexpected first message: {data}")
-
-            # Start background task to receive transcriptions
-            self.receive_task = asyncio.create_task(self._receive_transcripts())
-
-            logger.info("ElevenLabs STT streaming started")
+            return transcription.text if transcription and transcription.text else ""
 
         except Exception as e:
-            logger.error(f"Failed to start ElevenLabs STT stream: {e}")
-            self.streaming = False
-            raise RuntimeError(f"Failed to start ElevenLabs STT stream: {e}")
+            logger.error(f"ElevenLabs STT transcription failed: {e}")
+            return ""
+
+    async def start_stream(self) -> None:
+        """Start streaming session for real-time transcription."""
+        self.streaming = True
+        self.audio_buffer = bytearray()
+        self.is_speaking = False
+        self.silence_samples = 0
+        self.speech_samples = 0
+        self.pending_transcription = None
+        logger.info("ElevenLabs STT streaming started (local VAD mode)")
 
     async def stop_stream(self) -> None:
-        """Stop streaming connection."""
+        """Stop streaming session."""
         self.streaming = False
-
-        if self.receive_task:
-            self.receive_task.cancel()
-            try:
-                await self.receive_task
-            except asyncio.CancelledError:
-                pass
-            self.receive_task = None
-
-        if self.ws:
-            try:
-                await self.ws.close()
-            except Exception as e:
-                logger.warning(f"Error closing WebSocket: {e}")
-            self.ws = None
-
+        self.audio_buffer = bytearray()
+        self.is_speaking = False
         logger.info("ElevenLabs STT streaming stopped")
 
     async def process_audio_chunk(self, audio: bytes) -> Optional[str]:
         """
-        Process an audio chunk and return transcription when available.
+        Process an audio chunk and return transcription when speech ends.
+
+        Uses local VAD to detect speech segments. When the user stops speaking
+        (silence detected), sends accumulated audio to the batch API for transcription.
 
         Args:
             audio: Audio chunk as bytes (PCM 16-bit, 16kHz mono)
@@ -283,115 +241,104 @@ class ElevenLabsSTTProvider(RealtimeSTTProvider):
         Returns:
             Transcribed text when speech end is detected, None otherwise
         """
-        if not self.streaming or not self.ws:
+        if not self.streaming:
             return None
 
-        try:
-            # Encode audio as base64 and send to WebSocket
-            audio_b64 = base64.b64encode(audio).decode("utf-8")
-            message = json.dumps(
-                {
-                    "message_type": "input_audio_chunk",
-                    "audio_base_64": audio_b64,
-                    "commit": False,
-                    "sample_rate": self.sample_rate,
-                }
-            )
-            await self.ws.send(message)
+        # Calculate energy of this chunk for VAD
+        energy = self._calculate_energy(audio)
+        num_samples = len(audio) // self.bytes_per_sample
 
-            # Check if we have a pending transcription from the receive task
-            if self.pending_transcription:
-                result = self.pending_transcription
-                self.pending_transcription = None
-                return result
+        if energy > self.energy_threshold:
+            # Speech detected
+            if not self.is_speaking:
+                self.is_speaking = True
+                self.speech_samples = 0
+                logger.debug("Speech started")
 
-            return None
+            self.speech_samples += num_samples
+            self.silence_samples = 0
+            self.audio_buffer.extend(audio)
 
-        except Exception as e:
-            logger.error(f"Error processing audio chunk: {e}")
-            return None
+        elif self.is_speaking:
+            # We were speaking, now silence
+            self.silence_samples += num_samples
+            self.audio_buffer.extend(audio)  # Include some trailing silence
+
+            if self.silence_samples >= self.silence_samples_threshold:
+                # End of speech detected
+                logger.debug(f"Speech ended after {self.speech_samples} samples")
+
+                if self.speech_samples >= self.min_speech_samples:
+                    # Enough speech to transcribe
+                    audio_data = bytes(self.audio_buffer)
+                    self.audio_buffer = bytearray()
+                    self.is_speaking = False
+                    self.speech_samples = 0
+                    self.silence_samples = 0
+
+                    # Transcribe the accumulated audio
+                    text = await self.transcribe(audio_data)
+                    if text:
+                        logger.info(f"Transcribed: {text}")
+                        return text
+                else:
+                    # Too short, discard
+                    logger.debug("Speech too short, discarding")
+                    self.audio_buffer = bytearray()
+                    self.is_speaking = False
+                    self.speech_samples = 0
+                    self.silence_samples = 0
+
+        return None
 
     async def get_final_transcription(self) -> str:
         """Get any remaining buffered transcription."""
-        if not self.ws:
-            return ""
+        if len(self.audio_buffer) > 0 and self.speech_samples >= self.min_speech_samples:
+            audio_data = bytes(self.audio_buffer)
+            self.audio_buffer = bytearray()
+            text = await self.transcribe(audio_data)
+            return text
+        return ""
 
-        try:
-            # Send commit message to flush any remaining audio
-            message = json.dumps(
-                {
-                    "message_type": "input_audio_chunk",
-                    "audio_base_64": "",
-                    "commit": True,
-                    "sample_rate": self.sample_rate,
-                }
-            )
-            await self.ws.send(message)
+    def _calculate_energy(self, audio: bytes) -> float:
+        """Calculate RMS energy of audio chunk."""
+        if len(audio) < 2:
+            return 0.0
 
-            # Wait briefly for final transcription
-            await asyncio.sleep(0.5)
+        # Convert bytes to numpy array (16-bit signed integers)
+        samples = np.frombuffer(audio, dtype=np.int16).astype(np.float32)
 
-            # Collect any remaining transcriptions
-            if self.pending_transcription:
-                self.transcription_buffer.append(self.pending_transcription)
-                self.pending_transcription = None
+        # Normalize to [-1, 1] range
+        samples = samples / 32768.0
 
-            result = " ".join(self.transcription_buffer)
-            self.transcription_buffer = []
-            return result
+        # Calculate RMS energy
+        rms = np.sqrt(np.mean(samples**2))
+        return float(rms)
 
-        except Exception as e:
-            logger.error(f"Error getting final transcription: {e}")
-            return ""
+    def _pcm_to_wav(self, pcm_data: bytes) -> bytes:
+        """Convert raw PCM audio to WAV format."""
+        import struct
 
-    async def _receive_transcripts(self) -> None:
-        """Background task to receive transcriptions from WebSocket."""
-        while self.streaming and self.ws:
-            try:
-                message = await asyncio.wait_for(self.ws.recv(), timeout=30.0)
-                data = json.loads(message)
-                msg_type = data.get("message_type", "")
+        # WAV header parameters
+        num_channels = 1
+        sample_width = 2  # 16-bit
 
-                if msg_type == "partial_transcript":
-                    # Partial transcripts are intermediate results, log but don't use
-                    text = data.get("text", "")
-                    if text:
-                        logger.debug(f"Partial transcript: {text}")
+        # Create WAV header
+        wav_header = struct.pack(
+            "<4sI4s4sIHHIIHH4sI",
+            b"RIFF",
+            36 + len(pcm_data),  # File size - 8
+            b"WAVE",
+            b"fmt ",
+            16,  # fmt chunk size
+            1,  # Audio format (PCM)
+            num_channels,
+            self.sample_rate,
+            self.sample_rate * num_channels * sample_width,  # Byte rate
+            num_channels * sample_width,  # Block align
+            sample_width * 8,  # Bits per sample
+            b"data",
+            len(pcm_data),
+        )
 
-                elif msg_type == "committed_transcript":
-                    # Committed transcript is a final result
-                    text = data.get("text", "")
-                    if text:
-                        logger.info(f"Committed transcript: {text}")
-                        self.pending_transcription = text
-                        if self._transcription_event:
-                            self._transcription_event.set()
-
-                elif msg_type == "committed_transcript_with_timestamps":
-                    # Committed transcript with word timestamps
-                    text = data.get("text", "")
-                    if text:
-                        logger.info(f"Committed transcript (with timestamps): {text}")
-                        self.pending_transcription = text
-                        if self._transcription_event:
-                            self._transcription_event.set()
-
-                elif msg_type in ("scribe_error", "input_error"):
-                    logger.error(f"ElevenLabs STT error: {data}")
-
-                elif msg_type.startswith("scribe_"):
-                    # Handle various error types
-                    logger.warning(f"ElevenLabs STT message: {data}")
-
-            except asyncio.TimeoutError:
-                # No message received, continue waiting
-                continue
-
-            except asyncio.CancelledError:
-                break
-
-            except Exception as e:
-                logger.error(f"Error receiving transcript: {e}")
-                if not self.streaming:
-                    break
-                await asyncio.sleep(0.1)
+        return wav_header + pcm_data

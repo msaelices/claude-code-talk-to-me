@@ -75,7 +75,7 @@ Provider selection happens in `server.py` based on environment variables (`TALKT
 1. **MCP Tool Call** → `server.py` receives `initiate_call` tool request
 2. **CallManager** → `initiate_call()` starts the session, spawns background audio processing task
 3. **LocalPhoneProvider** → `phone_local.py` handles microphone/speaker I/O using sounddevice library
-4. **STT Pipeline** → Background task streams mic audio → ElevenLabsSTTProvider (WebSocket) → transcript updates
+4. **STT Pipeline** → Background task streams mic audio → local VAD detects speech segments → ElevenLabsSTTProvider (batch API) → transcript updates
 5. **TTS Output** → `speak()` calls ElevenLabsTTSProvider (HTTP) → sends audio to PhoneProvider for playback
 
 ### MCP Tools
@@ -93,12 +93,13 @@ Defined in `server/talktome_mcp/server.py`:
 - TTS output: 16-bit PCM, 22050Hz mono (converted from MP3)
 - STT input: 16-bit PCM, 16kHz mono
 
-### ElevenLabs STT Streaming
-The ElevenLabsSTTProvider implements streaming transcription via WebSocket:
-- `start_stream()`: Establishes WebSocket connection to ElevenLabs realtime API
-- `process_audio_chunk()`: Sends base64-encoded audio, returns transcribed text when VAD detects speech end
-- `get_final_transcription()`: Sends commit message, returns any remaining buffered transcription
-- Uses ElevenLabs server-side VAD for speech detection
+### ElevenLabs STT
+The ElevenLabsSTTProvider uses the ElevenLabs Python SDK with local VAD:
+- `start_stream()`: Initializes streaming state and audio buffer
+- `process_audio_chunk()`: Uses local energy-based VAD to detect speech; accumulates audio during speech, then sends to batch API when silence is detected
+- `get_final_transcription()`: Transcribes any remaining buffered audio
+- `transcribe()`: Uses `elevenlabs.speech_to_text.convert()` for batch transcription (scribe_v2 model)
+- Local VAD uses RMS energy threshold to detect speech vs silence
 
 ### ElevenLabs TTS
 The ElevenLabsTTSProvider uses the HTTP API:
@@ -115,8 +116,7 @@ The ElevenLabsTTSProvider uses the HTTP API:
 ### Provider Files
 - `providers/base.py`: Abstract interfaces
 - `providers/phone_local.py`: Local audio I/O via sounddevice
-- `providers/tts_elevenlabs.py`: ElevenLabs TTS (HTTP API)
-- `providers/stt_elevenlabs.py`: ElevenLabs STT (WebSocket API)
+- `providers/elevenlabs.py`: ElevenLabs TTS (HTTP API) and STT (Python SDK with local VAD)
 
 ## Important Notes
 
