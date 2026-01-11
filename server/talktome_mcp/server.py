@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 
 from mcp.server.fastmcp import FastMCP
-from mcp import Tool
 
 from .call_manager import CallManager
 from .providers import (
@@ -19,6 +18,7 @@ from .providers import (
     PiperTTSProvider,
     ElevenLabsTTSProvider
 )
+from .utils import error_response, success_response
 
 # Load environment variables from .env and .env.local
 load_dotenv()
@@ -124,10 +124,7 @@ async def initiate_call(message: str = "") -> Dict[str, Any]:
         Dict with success status, call details, and user's response if message was provided
     """
     if not call_manager:
-        return {
-            'success': False,
-            'error': 'Call manager not initialized'
-        }
+        return error_response('Call manager not initialized')
 
     # Initiate the call
     result = await call_manager.initiate_call("local")
@@ -141,20 +138,15 @@ async def initiate_call(message: str = "") -> Dict[str, Any]:
     if message and call_id:
         try:
             user_response = await call_manager.speak_and_listen(message)
-            return {
-                'success': True,
-                'call_id': call_id,
-                'status': 'Call initiated successfully',
-                'user_response': user_response,
-                'timestamp': result.get('timestamp')
-            }
+            return success_response(
+                call_id=call_id,
+                status='Call initiated successfully',
+                user_response=user_response,
+                timestamp=result.get('timestamp')
+            )
         except asyncio.TimeoutError:
             await call_manager.end_call()
-            return {
-                'success': False,
-                'error': 'Timeout waiting for user response',
-                'call_id': call_id
-            }
+            return error_response('Timeout waiting for user response', call_id=call_id)
 
     return result
 
@@ -174,36 +166,19 @@ async def continue_call(message: str) -> Dict[str, Any]:
         Dict with success status and user's response
     """
     if not call_manager:
-        return {
-            'success': False,
-            'error': 'Call manager not initialized'
-        }
+        return error_response('Call manager not initialized')
 
     if not call_manager.active_call_id:
-        return {
-            'success': False,
-            'error': 'No active call'
-        }
+        return error_response('No active call')
 
     if not message:
-        return {
-            'success': False,
-            'error': 'Message parameter is required'
-        }
+        return error_response('Message parameter is required')
 
     try:
         user_response = await call_manager.speak_and_listen(message)
-        return {
-            'success': True,
-            'user_response': user_response,
-            'call_id': call_manager.active_call_id
-        }
+        return success_response(user_response=user_response, call_id=call_manager.active_call_id)
     except asyncio.TimeoutError:
-        return {
-            'success': False,
-            'error': 'Timeout waiting for user response',
-            'call_id': call_manager.active_call_id
-        }
+        return error_response('Timeout waiting for user response', call_id=call_manager.active_call_id)
 
 
 @mcp.tool(
@@ -221,19 +196,12 @@ async def speak(text: str) -> Dict[str, Any]:
         Dict with success status
     """
     if not call_manager:
-        return {
-            'success': False,
-            'error': 'Call manager not initialized'
-        }
+        return error_response('Call manager not initialized')
 
     if not text:
-        return {
-            'success': False,
-            'error': 'Text parameter is required'
-        }
+        return error_response('Text parameter is required')
 
-    result = await call_manager.speak(text)
-    return result
+    return await call_manager.speak(text)
 
 
 @mcp.tool(
@@ -255,36 +223,19 @@ async def report_completion(message: str) -> Dict[str, Any]:
         Dict with success status and user's next response
     """
     if not call_manager:
-        return {
-            'success': False,
-            'error': 'Call manager not initialized'
-        }
+        return error_response('Call manager not initialized')
 
     if not call_manager.active_call_id:
-        return {
-            'success': False,
-            'error': 'No active call'
-        }
+        return error_response('No active call')
 
     if not message:
-        return {
-            'success': False,
-            'error': 'Message parameter is required'
-        }
+        return error_response('Message parameter is required')
 
     try:
         user_response = await call_manager.speak_and_listen(message)
-        return {
-            'success': True,
-            'user_response': user_response,
-            'call_id': call_manager.active_call_id
-        }
+        return success_response(user_response=user_response, call_id=call_manager.active_call_id)
     except asyncio.TimeoutError:
-        return {
-            'success': False,
-            'error': 'Timeout waiting for user response',
-            'call_id': call_manager.active_call_id
-        }
+        return error_response('Timeout waiting for user response', call_id=call_manager.active_call_id)
 
 
 @mcp.tool(
@@ -299,13 +250,9 @@ async def get_transcript() -> Dict[str, Any]:
         Dict with transcript data
     """
     if not call_manager:
-        return {
-            'success': False,
-            'error': 'Call manager not initialized'
-        }
+        return error_response('Call manager not initialized')
 
-    result = await call_manager.get_transcript()
-    return result
+    return await call_manager.get_transcript()
 
 
 @mcp.tool(
@@ -320,13 +267,9 @@ async def end_call() -> Dict[str, Any]:
         Dict with call summary
     """
     if not call_manager:
-        return {
-            'success': False,
-            'error': 'Call manager not initialized'
-        }
+        return error_response('Call manager not initialized')
 
-    result = await call_manager.end_call()
-    return result
+    return await call_manager.end_call()
 
 
 @mcp.tool(
@@ -370,10 +313,7 @@ async def test_audio() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Audio test error: {e}")
 
-    return {
-        'success': all(results.values()),
-        'results': results
-    }
+    return success_response(results=results) if all(results.values()) else error_response('Some audio tests failed', results=results)
 
 
 async def cleanup():

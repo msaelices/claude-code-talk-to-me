@@ -3,7 +3,7 @@
 import io
 import logging
 import os
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
 from .base import TTSProvider
 
@@ -126,51 +126,3 @@ class ElevenLabsTTSProvider(TTSProvider):
         audio.export(pcm_io, format='s16le')
 
         return pcm_io.getvalue()
-
-    async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
-        """
-        Stream synthesized audio in chunks.
-
-        Note: ElevenLabs streaming API is available but requires websocket.
-        For simplicity, this implementation uses the regular HTTP API.
-
-        Args:
-            text: Text to synthesize
-
-        Yields:
-            Audio chunks as bytes
-        """
-        # Split text into sentences for streaming
-        import re
-        sentences = re.findall(r'[^.!?]+[.!?]+|[^.!?]+$', text)
-
-        if len(sentences) <= 1:
-            # Short text - just synthesize all at once
-            audio = await self.synthesize(text)
-            if audio:
-                yield audio
-            return
-
-        # Process sentences sequentially
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence:
-                try:
-                    audio = await self.synthesize(sentence)
-                    if audio:
-                        yield audio
-                except Exception as e:
-                    logger.error(f"Error generating audio chunk: {e}")
-                    # Continue with other chunks even if one fails
-
-    @staticmethod
-    async def validate_installation() -> bool:
-        """Check if ElevenLabs is configured and accessible."""
-        try:
-            provider = ElevenLabsTTSProvider()
-            # Try a simple synthesis
-            test_audio = await provider.synthesize("test")
-            return len(test_audio) > 0
-        except Exception as e:
-            logger.warning(f"ElevenLabs validation failed: {e}")
-            return False

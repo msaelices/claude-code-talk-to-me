@@ -1,9 +1,12 @@
 """Base provider interfaces for CallMe MCP."""
 
+import logging
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Optional, Callable, Dict, Any
-import asyncio
-import numpy as np
+from typing import AsyncGenerator, Optional, Dict, Any
+
+from ..utils import split_into_sentences
+
+logger = logging.getLogger(__name__)
 
 
 class PhoneProvider(ABC):
@@ -80,11 +83,36 @@ class TTSProvider(ABC):
 
     async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
         """
-        Stream synthesized audio in chunks.
-        Default implementation calls synthesize() once.
+        Stream synthesized audio in chunks for lower latency.
+
+        Splits text into sentences and synthesizes each one,
+        yielding audio chunks as they're ready.
+
+        Args:
+            text: Text to synthesize
+
+        Yields:
+            Audio chunks as bytes
         """
-        audio = await self.synthesize(text)
-        yield audio
+        sentences = split_into_sentences(text)
+
+        if len(sentences) <= 1:
+            # Short text - just synthesize all at once
+            audio = await self.synthesize(text)
+            if audio:
+                yield audio
+            return
+
+        # Process sentences sequentially
+        for sentence in sentences:
+            if sentence:
+                try:
+                    audio = await self.synthesize(sentence)
+                    if audio:
+                        yield audio
+                except Exception as e:
+                    logger.error(f"Error generating audio chunk: {e}")
+                    # Continue with other chunks even if one fails
 
 
 class STTProvider(ABC):

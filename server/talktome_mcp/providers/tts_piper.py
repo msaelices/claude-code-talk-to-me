@@ -3,11 +3,9 @@
 import asyncio
 import logging
 import os
-import subprocess
-from pathlib import Path
-from typing import AsyncGenerator, Optional, Dict, Any
 import sys
-import re
+from pathlib import Path
+from typing import Optional, Dict, Any
 
 from .base import TTSProvider
 
@@ -128,69 +126,5 @@ class PiperTTSProvider(TTSProvider):
 
         finally:
             # Clean up temporary files
-            try:
-                os.unlink(input_file)
-            except:
-                pass
-            try:
-                os.unlink(output_file)
-            except:
-                pass
-
-    async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
-        """
-        Stream synthesized audio in chunks for lower latency.
-
-        Args:
-            text: Text to synthesize
-
-        Yields:
-            Audio chunks as bytes
-        """
-        # Split text into sentences for streaming
-        sentences = self._split_into_sentences(text)
-
-        if len(sentences) <= 1:
-            # Short text - just synthesize all at once
-            audio = await self.synthesize(text)
-            yield audio
-            return
-
-        # Process sentences sequentially to prevent audio overlap
-        for sentence in sentences:
-            try:
-                audio = await self.synthesize(sentence)
-                if audio:
-                    yield audio
-            except Exception as e:
-                logger.error(f"Error generating audio chunk: {e}")
-                # Continue with other chunks even if one fails
-
-    def _split_into_sentences(self, text: str) -> list[str]:
-        """Split text into sentences for streaming synthesis."""
-        # Simple sentence splitter - splits on punctuation while keeping it
-        sentences = re.findall(r'[^.!?]+[.!?]+|[^.!?]+$', text)
-        return [s.strip() for s in sentences if s.strip()]
-
-    @staticmethod
-    async def validate_installation() -> bool:
-        """Check if Piper is installed and accessible."""
-        try:
-            process = await asyncio.create_subprocess_exec(
-                sys.executable, '-m', 'piper', '--help',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await asyncio.wait_for(process.communicate(), timeout=5)
-            return process.returncode == 0
-        except (asyncio.TimeoutError, FileNotFoundError):
-            return False
-
-    @staticmethod
-    async def get_available_voices() -> list[str]:
-        """Get list of available Piper models."""
-        models_dir = Path('models/piper')
-        if not models_dir.exists():
-            return []
-
-        return [str(f) for f in models_dir.glob('*.onnx')]
+            Path(input_file).unlink(missing_ok=True)
+            Path(output_file).unlink(missing_ok=True)

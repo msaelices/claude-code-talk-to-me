@@ -2,17 +2,18 @@
 
 import asyncio
 import logging
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 from .providers import (
-    PhoneProvider,
-    TTSProvider,
-    RealtimeSTTProvider,
     LocalPhoneProvider,
+    PhoneProvider,
+    PiperTTSProvider,
+    RealtimeSTTProvider,
+    TTSProvider,
     WhisperSTTProvider,
-    PiperTTSProvider
 )
+from .utils import error_response, success_response
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +64,7 @@ class CallManager:
             Call status information
         """
         if self.active_call_id:
-            return {
-                'success': False,
-                'error': 'A call is already active',
-                'call_id': self.active_call_id
-            }
+            return error_response('A call is already active', call_id=self.active_call_id)
 
         try:
             # Start the call
@@ -84,19 +81,15 @@ class CallManager:
 
             logger.info(f"Call initiated: {call_id}")
 
-            return {
-                'success': True,
-                'call_id': call_id,
-                'status': 'Call initiated successfully',
-                'timestamp': datetime.now().isoformat()
-            }
+            return success_response(
+                call_id=call_id,
+                status='Call initiated successfully',
+                timestamp=datetime.now().isoformat()
+            )
 
         except Exception as e:
             logger.error(f"Failed to initiate call: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return error_response(str(e))
 
     async def speak(self, text: str) -> Dict[str, Any]:
         """
@@ -109,18 +102,11 @@ class CallManager:
             Operation status
         """
         if not self.active_call_id:
-            return {
-                'success': False,
-                'error': 'No active call'
-            }
+            return error_response('No active call')
 
         try:
             # Add to transcript
-            self.call_transcript.append({
-                'role': 'assistant',
-                'text': text,
-                'timestamp': datetime.now().isoformat()
-            })
+            self._add_transcript_entry('assistant', text)
 
             # Pause recording to prevent audio feedback/echo
             await self.phone_provider.pause_recording(self.active_call_id)
@@ -143,19 +129,13 @@ class CallManager:
             # Resume recording after speech completes
             await self.phone_provider.resume_recording(self.active_call_id)
 
-            return {
-                'success': True,
-                'status': 'Speech sent successfully'
-            }
+            return success_response(status='Speech sent successfully')
 
         except Exception as e:
             logger.error(f"Failed to speak: {e}")
             # Make sure to resume recording even if there's an error
             await self.phone_provider.resume_recording(self.active_call_id)
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return error_response(str(e))
 
     async def get_transcript(self) -> Dict[str, Any]:
         """
@@ -164,12 +144,11 @@ class CallManager:
         Returns:
             Transcript data
         """
-        return {
-            'success': True,
-            'transcript': self.call_transcript,
-            'call_active': self.call_active,
-            'call_id': self.active_call_id
-        }
+        return success_response(
+            transcript=self.call_transcript,
+            call_active=self.call_active,
+            call_id=self.active_call_id
+        )
 
     async def end_call(self) -> Dict[str, Any]:
         """
@@ -179,10 +158,7 @@ class CallManager:
             Call summary
         """
         if not self.active_call_id:
-            return {
-                'success': False,
-                'error': 'No active call'
-            }
+            return error_response('No active call')
 
         try:
             # Stop audio processing
@@ -191,11 +167,7 @@ class CallManager:
             # Get final transcription
             final_text = await self.stt_provider.get_final_transcription()
             if final_text:
-                self.call_transcript.append({
-                    'role': 'user',
-                    'text': final_text,
-                    'timestamp': datetime.now().isoformat()
-                })
+                self._add_transcript_entry('user', final_text)
 
             # Stop STT stream
             await self.stt_provider.stop_stream()
@@ -204,13 +176,12 @@ class CallManager:
             await self.phone_provider.hang_up(self.active_call_id)
 
             # Prepare summary
-            summary = {
-                'success': True,
-                'call_id': self.active_call_id,
-                'duration': self._calculate_duration(),
-                'transcript': self.call_transcript,
-                'timestamp': datetime.now().isoformat()
-            }
+            summary = success_response(
+                call_id=self.active_call_id,
+                duration=self._calculate_duration(),
+                transcript=self.call_transcript,
+                timestamp=datetime.now().isoformat()
+            )
 
             # Clear state
             self.active_call_id = None
@@ -221,10 +192,7 @@ class CallManager:
 
         except Exception as e:
             logger.error(f"Failed to end call: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return error_response(str(e))
 
     async def _process_incoming_audio(self):
         """Background task to process incoming audio."""
@@ -243,11 +211,7 @@ class CallManager:
 
                 if text:
                     # Add to transcript
-                    self.call_transcript.append({
-                        'role': 'user',
-                        'text': text,
-                        'timestamp': datetime.now().isoformat()
-                    })
+                    self._add_transcript_entry('user', text)
                     logger.info(f"User said: {text}")
 
                     # Signal that transcription is available
@@ -313,6 +277,19 @@ class CallManager:
         await self.speak(text)
         return await self.listen(timeout_ms)
 
+    def _add_transcript_entry(self, role: str, text: str) -> None:
+        """Add an entry to the call transcript.
+
+        Args:
+            role: The speaker role ('user' or 'assistant')
+            text: The spoken text
+        """
+        self.call_transcript.append({
+            'role': role,
+            'text': text,
+            'timestamp': datetime.now().isoformat()
+        })
+
     def _calculate_duration(self) -> str:
         """Calculate call duration from transcript timestamps."""
         if not self.call_transcript:
@@ -325,7 +302,7 @@ class CallManager:
             minutes = int(duration.total_seconds() // 60)
             seconds = int(duration.total_seconds() % 60)
             return f"{minutes}:{seconds:02d}"
-        except:
+        except (KeyError, ValueError):
             return "unknown"
 
     async def cleanup(self):

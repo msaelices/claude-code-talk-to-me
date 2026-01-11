@@ -2,13 +2,14 @@
 
 import asyncio
 import logging
-from typing import AsyncGenerator, Optional, Dict
-import sounddevice as sd
-import numpy as np
-from queue import Queue
 import threading
+from queue import Empty, Queue
+from typing import AsyncGenerator, Dict, Optional
 
-from .base import PhoneProvider, Call
+import numpy as np
+import sounddevice as sd
+
+from .base import Call, PhoneProvider
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class LocalCall(Call):
 
                         # Signal that playback is done
                         self.playback_done_event.set()
-                    except:
+                    except Empty:
                         continue
             logger.info(f"[{self.id}] Playback thread ended")
 
