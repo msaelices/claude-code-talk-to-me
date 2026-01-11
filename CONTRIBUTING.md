@@ -107,18 +107,7 @@ Add to `~/.config/claude-code/config.json`:
 
 Replace `/path/to/claude-code-talk-to-me` with the actual path.
 
-### Configure Permissions
-
-```
-/allowed-tools mcp__talktome__*
-```
-
-Or add to `~/.claude/settings.json`:
-```json
-{
-  "allowedTools": ["mcp__talktome__*"]
-}
-```
+Then configure permissions as described in the [README](README.md#3-configure-permissions).
 
 ---
 
