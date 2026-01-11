@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Install prerequisites for local TTS/STT on Linux
-# This script installs Whisper (STT) and Piper (TTS) with their dependencies
+# Install prerequisites for TalkToMe cloud mode on Linux
+# This script installs audio system dependencies for local microphone/speaker access
 
 set -e
 
 echo "======================================"
-echo "TalkToMe Local Mode Prerequisites Setup"
+echo "TalkToMe Cloud Mode Prerequisites Setup"
 echo "======================================"
 echo ""
 
@@ -26,34 +26,6 @@ fi
 # Check Python version
 PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 echo "Found Python $PYTHON_VERSION"
-
-echo ""
-echo "Installing Python packages with uv..."
-echo "======================================"
-
-# Install Whisper with optimizations
-echo "Installing faster-whisper (optimized Whisper implementation)..."
-uv pip install --upgrade faster-whisper
-
-# Install Piper TTS
-echo "Installing Piper TTS..."
-uv pip install --upgrade piper-tts
-
-# Install voice activity detection
-echo "Installing Silero VAD..."
-uv pip install --upgrade silero-vad
-
-# Install audio libraries
-echo "Installing audio libraries..."
-uv pip install --upgrade sounddevice numpy scipy
-
-# Optional: Install streaming support
-echo "Installing optional streaming support..."
-uv pip install --upgrade websockets asyncio
-
-# Install MCP server dependencies
-echo "Installing MCP server dependencies..."
-cd server && uv pip install -e . && cd ..
 
 echo ""
 echo "Checking system audio dependencies..."
@@ -77,7 +49,7 @@ else
     fi
 fi
 
-# Check for ffmpeg (useful for audio format conversion)
+# Check for ffmpeg (required for ElevenLabs MP3 to PCM conversion)
 if command -v ffmpeg &> /dev/null; then
     echo "✓ ffmpeg detected"
 else
@@ -90,15 +62,14 @@ else
         sudo pacman -S --noconfirm ffmpeg
     else
         echo "Warning: Could not install ffmpeg. Please install manually."
+        echo "ffmpeg is required for audio format conversion."
     fi
 fi
 
 echo ""
-echo "Creating models directory..."
-echo "============================="
-mkdir -p models
-mkdir -p models/whisper
-mkdir -p models/piper
+echo "Installing MCP server dependencies..."
+echo "====================================="
+cd server && uv pip install -e . && cd ..
 
 echo ""
 echo "======================================"
@@ -106,7 +77,8 @@ echo "Installation complete!"
 echo "======================================"
 echo ""
 echo "Next steps:"
-echo "1. Download models: uv run python3 download-models.py"
-echo "2. Test audio: uv run python3 test-audio.py"
-echo "3. Configure environment: cp .env.example .env.local"
+echo "1. Get your ElevenLabs API key from https://elevenlabs.io"
+echo "2. Configure environment: cp .env.example .env.local"
+echo "3. Set your API key: TALKTOME_ELEVENLABS_API_KEY=your_key_here"
+echo "4. Test audio: uv run python3 test-audio.py"
 echo ""

@@ -4,7 +4,7 @@ This guide covers development setup, debugging, and how to contribute to TalkToM
 
 ## Development Setup
 
-First, install system dependencies as described in the [README](README.md#1-install-system-dependencies-required).
+First, install system dependencies as described in the [README](README.md#1-install-system-dependencies-linux).
 
 ### Clone and Install Dependencies
 
@@ -21,38 +21,27 @@ pip install -e .
 uv pip install -e .
 ```
 
-### Download Models
-
-```bash
-# Interactive model download
-uv run python3 download-models.py
-```
-
-Or download manually:
-- **Whisper**: Auto-downloads on first use to `~/.cache/huggingface/hub/`
-- **Piper**: Download to `models/piper/` from [Hugging Face](https://huggingface.co/rhasspy/piper-voices)
-
 ### Configure Environment
 
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local`:
+Edit `.env.local` with your ElevenLabs API key:
 ```env
+# Required: Your ElevenLabs API key
+TALKTOME_ELEVENLABS_API_KEY=your_api_key_here
+
 # Audio system (pulseaudio, pipewire, or alsa)
 TALKTOME_AUDIO_SYSTEM=pulseaudio
 
-# TTS provider (piper for local, elevenlabs for cloud)
-TALKTOME_TTS_PROVIDER=piper
-TALKTOME_PIPER_SPEED=0.85
+# TTS configuration
+TALKTOME_TTS_PROVIDER=elevenlabs
+TALKTOME_ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 
-# STT provider
-TALKTOME_STT_PROVIDER=whisper
-TALKTOME_WHISPER_MODEL=base
-
-# Timeout for user speech (ms)
-TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
+# STT configuration
+TALKTOME_STT_PROVIDER=elevenlabs
+TALKTOME_ELEVENLABS_STT_MODEL=scribe_v2_realtime
 ```
 
 ### Run the Server
@@ -64,12 +53,9 @@ uv run -m talktome_mcp.server
 
 You should see:
 ```
-TalkToMe MCP server ready (Local Mode)
-Audio: local
-TTS: piper
-STT: whisper
-
-Microphone and speakers ready for communication
+TalkToMe Cloud Audio Communication
+================================
+Ready for voice communication!
 ```
 
 ---
@@ -95,10 +81,10 @@ Add to `~/.config/claude-code/config.json`:
         "talktome_mcp.server"
       ],
       "env": {
+        "TALKTOME_ELEVENLABS_API_KEY": "your_api_key_here",
         "TALKTOME_AUDIO_SYSTEM": "pulseaudio",
-        "TALKTOME_TTS_PROVIDER": "piper",
-        "TALKTOME_STT_PROVIDER": "whisper",
-        "TALKTOME_WHISPER_MODEL": "base"
+        "TALKTOME_TTS_PROVIDER": "elevenlabs",
+        "TALKTOME_STT_PROVIDER": "elevenlabs"
       }
     }
   }
@@ -107,7 +93,7 @@ Add to `~/.config/claude-code/config.json`:
 
 Replace `/path/to/claude-code-talk-to-me` with the actual path.
 
-Then configure permissions as described in the [README](README.md#3-configure-permissions).
+Then configure permissions as described in the [README](README.md#5-configure-permissions).
 
 ---
 
@@ -124,20 +110,20 @@ This tests:
 - Microphone recording
 - Speaker playback
 - PulseAudio/PipeWire connectivity
-- Piper TTS synthesis
-- Whisper STT transcription
+- ElevenLabs TTS synthesis (if API key configured)
 
 ### Test Individual Components
 
 ```bash
-# Test Whisper model loading
-uv run python3 test-whisper-download.py
-
 # Test audio playback
 paplay /usr/share/sounds/freedesktop/stereo/bell.oga
 
 # Test microphone
 arecord -d 5 test.wav && aplay test.wav
+
+# Test ElevenLabs API
+curl -X GET "https://api.elevenlabs.io/v1/user" \
+  -H "xi-api-key: YOUR_API_KEY"
 ```
 
 ---
@@ -158,11 +144,14 @@ pactl info | grep "Default Source"
 arecord -d 5 test.wav && aplay test.wav
 ```
 
-**Whisper model not loading:**
+**API key issues:**
 ```bash
-# Clear and re-download
-rm -rf ~/.cache/huggingface/hub/models--Systran--faster-whisper-*
-uv run python3 test-whisper-download.py
+# Verify your API key is set
+echo $TALKTOME_ELEVENLABS_API_KEY
+
+# Test the API directly
+curl -X GET "https://api.elevenlabs.io/v1/user" \
+  -H "xi-api-key: YOUR_API_KEY"
 ```
 
 **Permission issues:**
@@ -255,9 +244,8 @@ server/talktome_mcp/
 └── providers/
     ├── base.py         # Abstract interfaces
     ├── phone_local.py  # Local audio I/O (sounddevice)
-    ├── tts_piper.py    # Piper TTS provider
-    ├── tts_elevenlabs.py # ElevenLabs TTS provider
-    └── stt_whisper.py  # Whisper STT provider
+    ├── tts_elevenlabs.py # ElevenLabs TTS provider (HTTP API)
+    └── stt_elevenlabs.py # ElevenLabs STT provider (WebSocket API)
 ```
 
 ### Audio Flow
@@ -265,5 +253,5 @@ server/talktome_mcp/
 1. `server.py` receives MCP tool call
 2. `CallManager` manages session state
 3. `LocalPhoneProvider` handles mic/speaker I/O
-4. `WhisperSTTProvider` transcribes speech
-5. `PiperTTSProvider` synthesizes responses
+4. `ElevenLabsSTTProvider` streams audio to cloud for transcription
+5. `ElevenLabsTTSProvider` synthesizes responses via cloud API

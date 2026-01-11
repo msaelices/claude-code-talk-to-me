@@ -1,34 +1,34 @@
-# TalkToMe - Local Voice Communication for Claude
+# TalkToMe - Voice Communication for Claude
 
 **Let Claude communicate with you through your computer's microphone and speakers.**
 
-Have natural voice conversations with Claude using local audio. Start a task, walk away. Your computer speaks when Claude is done, stuck, or needs a decision.
+Have natural voice conversations with Claude using your local audio hardware. Start a task, walk away. Your computer speaks when Claude is done, stuck, or needs a decision.
 
 <img src="./static/taxi-driver.jpg" width="500" alt="TalkToMe - Voice conversations with Claude">
 
-- **Zero cost** - No phone charges, no API costs for communication (optional ElevenLabs available)
-- **Privacy-first** - All audio processing can happen locally on your machine
+- **Simple setup** - Just install and add your API key. No model downloads, no GPU setup
+- **Cross-platform** - Works on Linux, macOS, and Windows (with audio support)
 - **Multi-turn conversations** - Talk through decisions naturally
-- **Tool-use composable** - Claude can e.g. do a web search while talking with you
+- **Tool-use composable** - Claude can do web searches, edit code, etc. while talking with you
 
 ---
 
 ## Features
 
-- 🎙️ **Local Speech-to-Text** using Whisper
-- 🔊 **Text-to-Speech** using Piper neural TTS (local) or ElevenLabs (cloud)
-- 🎧 **System Audio Integration** - Works with PulseAudio, PipeWire, or ALSA
-- 💻 **Cross-Platform** - Linux support (Windows/Mac with modifications)
-- 🔒 **Privacy** - All processing can be done locally without cloud services
-- ⚡ **Fast** - Sub-second response times with local models
+- **Cloud Speech-to-Text** using ElevenLabs real-time transcription
+- **Cloud Text-to-Speech** using ElevenLabs high-quality voices
+- **System Audio Integration** - Works with PulseAudio, PipeWire, or ALSA
+- **Cross-Platform** - Linux, macOS, Windows support
+- **Fast Setup** - No ML model downloads, no GPU configuration
+- **Low Resource Usage** - ~50MB storage, 1-2GB RAM
 
 ---
 
 ## Quick Start
 
-### 1. Install System Dependencies (Required)
+### 1. Install System Dependencies (Linux)
 
-TalkToMe requires audio and Python packages that must be installed via your system package manager:
+TalkToMe requires audio packages for microphone/speaker access:
 
 **Ubuntu/Debian:**
 ```bash
@@ -45,27 +45,35 @@ sudo dnf install pulseaudio-utils python3 python3-pip ffmpeg
 sudo pacman -S pulseaudio python python-pip ffmpeg
 ```
 
-### 2. Install via Claude Code Marketplace
+**macOS:**
+```bash
+brew install ffmpeg
+```
+
+### 2. Get Your ElevenLabs API Key
+
+1. Sign up at [https://elevenlabs.io](https://elevenlabs.io)
+2. Go to Profile Settings → API Keys
+3. Copy your API key
+
+### 3. Install via Claude Code Marketplace
 
 ```
 /plugin marketplace add msaelices/claude-code-talk-to-me
 /plugin install talktome@msaelices
 ```
 
-> **Note**: First startup downloads models (~140 MB). Subsequent starts are instant.
-
-### 3. (Optional) Configure Models
-
-Before starting Claude, you can set environment variables to choose different models:
+### 4. Configure Your API Key
 
 ```bash
-export TALKTOME_WHISPER_MODEL=small      # Default: base (options: tiny, base, small, medium, large-v3)
-export TALKTOME_PIPER_VOICE=en_US-danny-low  # Default: en_US-amy-medium
+# Create local config file
+cp .env.example .env.local
+
+# Edit .env.local and add your API key
+TALKTOME_ELEVENLABS_API_KEY=your_api_key_here
 ```
 
-Skip this step to use the recommended defaults.
-
-### 4. Configure Permissions
+### 5. Configure Permissions
 
 ```
 /allowed-tools mcp__talktome__*
@@ -87,7 +95,7 @@ For natural voice conversations, TalkToMe tools need to run without permission p
 claude --dangerously-skip-permissions
 ```
 
-> ⚠️ **Warning**: Only use this if you trust the tasks you're asking Claude to perform.
+> **Warning**: Only use this if you trust the tasks you're asking Claude to perform.
 
 **Alternative: Sound notification hook**
 
@@ -182,15 +190,15 @@ Plugin ────stdio──────────────────�
                                          │   (PulseAudio/PipeWire)
                                          │
                                          ├─► Microphone Input
-                                         │   └─► Whisper STT
+                                         │   └─► ElevenLabs STT (cloud)
                                          │       └─► Text transcript
                                          │
                                          └─► Speaker Output
-                                             └─► Piper TTS
+                                             └─► ElevenLabs TTS (cloud)
                                                  └─► Audio playback
 ```
 
-The MCP server runs locally and directly interfaces with your system's audio.
+The MCP server runs locally and interfaces with your system's audio hardware. Speech processing is handled by ElevenLabs cloud services for high quality and simple setup.
 
 ---
 
@@ -283,58 +291,46 @@ result = await end_call()
 
 ## Configuration Options
 
-### Model Auto-Download
-
-Models are automatically downloaded on first startup. Configure which models to use via environment variables:
+### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TALKTOME_PIPER_VOICE` | `en_US-amy-medium` | Piper TTS voice to download |
-| `TALKTOME_WHISPER_MODEL` | `base` | Whisper STT model to download |
+| `TALKTOME_ELEVENLABS_API_KEY` | (required) | Your ElevenLabs API key |
+| `TALKTOME_TTS_PROVIDER` | `elevenlabs` | TTS provider |
+| `TALKTOME_STT_PROVIDER` | `elevenlabs` | STT provider |
+| `TALKTOME_ELEVENLABS_VOICE_ID` | `21m00Tcm4TlvDq8ikWAM` | Voice to use (Rachel) |
+| `TALKTOME_ELEVENLABS_MODEL_ID` | `eleven_multilingual_v2` | TTS model |
+| `TALKTOME_ELEVENLABS_STT_MODEL` | `scribe_v2_realtime` | STT model |
 
-### Whisper STT Models
+### Voice Options
 
-| Model | Size | Accuracy | Speed | Use Case |
-|-------|------|----------|-------|----------|
-| `tiny` | 39 MB | 85% | Fastest | Quick testing |
-| `base` | 74 MB | 90% | Fast | **Recommended** |
-| `small` | 244 MB | 93% | Medium | Better accuracy |
-| `medium` | 769 MB | 95% | Slow | High accuracy |
-| `large-v3` | 1.5 GB | 98% | Slowest | Best accuracy |
+ElevenLabs provides many high-quality voices. Find voice IDs at [https://elevenlabs.io/voice-library](https://elevenlabs.io/voice-library).
 
-### Piper TTS Voices
-
-Download additional voices from [Hugging Face](https://huggingface.co/rhasspy/piper-voices):
-- `en_US-amy-medium` - American female (recommended)
-- `en_US-danny-low` - American male (fast)
-- `en_GB-alan-medium` - British male
-- `en_US-libritts_r-medium` - Neutral voice
-
-### Performance Tuning
-
-For **faster response** (lower quality):
-```env
-TALKTOME_WHISPER_MODEL=tiny
-TALKTOME_WHISPER_COMPUTE_TYPE=int8
-```
-
-For **better quality** (slower):
-```env
-TALKTOME_WHISPER_MODEL=small
-TALKTOME_WHISPER_DEVICE=cuda  # If you have NVIDIA GPU
-```
+Popular voices:
+- `21m00Tcm4TlvDq8ikWAM` - Rachel (default, female)
+- `ErXwobaYiN019PkySvjV` - Antoni (male)
+- `EXAVITQu4vr4xnSDxMaL` - Bella (female)
+- `MF3mGyEYCl7XYWbV9V6O` - Elli (female)
 
 ---
 
 ## Costs
 
-**Local Mode**: **FREE** 🎉
-- No phone charges
-- No cloud API costs
-- All processing on your machine
+TalkToMe uses ElevenLabs cloud services. Pricing as of 2024:
 
-**Optional Cloud Mode** (if using ElevenLabs):
-- **ElevenLabs TTS**: ~$0.30/min (Starter plan)
+| Service | Cost | Notes |
+|---------|------|-------|
+| **ElevenLabs TTS** | ~$0.30/min | Based on character count |
+| **ElevenLabs STT** | ~$0.10/min | Based on audio duration |
+
+**Estimated cost per conversation:**
+- Short (2-3 exchanges): ~$0.05-0.10
+- Medium (10 min): ~$0.40-0.50
+- Long (30 min): ~$1.00-1.50
+
+ElevenLabs offers a free tier with limited usage to get started.
+
+> **Tip:** For lower costs, consider using ElevenLabs for TTS only and a cheaper STT provider (future feature).
 
 ---
 
@@ -358,68 +354,26 @@ pactl info | grep "Default Source"
 arecord -d 5 test.wav && aplay test.wav
 ```
 
-### Whisper Model Not Loading
+### API Key Issues
 ```bash
-# Re-download the model
-rm -rf ~/.cache/huggingface/hub/models--Systran--faster-whisper-*
-uv run python3 test-whisper-download.py
+# Verify your API key is set
+echo $TALKTOME_ELEVENLABS_API_KEY
+
+# Test the API directly
+curl -X GET "https://api.elevenlabs.io/v1/user" \
+  -H "xi-api-key: YOUR_API_KEY"
 ```
 
-### High CPU Usage
-- Use smaller Whisper model (`tiny` or `base`)
-- Enable int8 quantization: `TALKTOME_WHISPER_COMPUTE_TYPE=int8`
+### Rate Limits / Quota Exceeded
+- Check your ElevenLabs usage at https://elevenlabs.io/usage
+- Upgrade your plan if needed
+- Wait for quota reset (monthly)
 
 ### Permission Issues
 ```bash
 # Add user to audio group
 sudo usermod -a -G audio $USER
 # Log out and back in
-```
-
----
-
-## Advanced Usage
-
-### GPU Acceleration (NVIDIA)
-
-```bash
-# Install CUDA support
-uv pip install nvidia-cublas-cu11 nvidia-cudnn-cu11
-uv pip install faster-whisper --upgrade
-
-# Configure for GPU
-echo "TALKTOME_WHISPER_DEVICE=cuda" >> .env.local
-echo "TALKTOME_WHISPER_COMPUTE_TYPE=float16" >> .env.local
-```
-
-### Hybrid Mode
-
-Use local STT with cloud TTS for best quality:
-```env
-TALKTOME_STT_PROVIDER=whisper       # Local STT
-TALKTOME_TTS_PROVIDER=elevenlabs    # Cloud TTS (ElevenLabs)
-TALKTOME_ELEVENLABS_API_KEY=your_api_key_here
-TALKTOME_ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM  # Optional: Rachel voice
-```
-
-**ElevenLabs TTS Configuration**:
-- Get your API key from https://elevenlabs.io
-- Default voice is "Rachel" (`21m00Tcm4TlvDq8ikWAM`)
-- Default model is `eleven_multilingual_v2`
-- Optional parameters:
-  - `TALKTOME_ELEVENLABS_STABILITY` (0.0-1.0, default: varies by voice)
-  - `TALKTOME_ELEVENLABS_SIMILARITY_BOOST` (0.0-1.0, default: varies by voice)
-
-### Custom Voices
-
-```bash
-# Download additional Piper voices
-cd models/piper
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
-
-# Update configuration
-echo "TALKTOME_PIPER_MODEL_PATH=models/piper/en_US-lessac-medium.onnx" >> .env.local
 ```
 
 ---
@@ -437,20 +391,25 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ## System Requirements
 
-- **OS**: Linux (Ubuntu/Debian/Fedora/Arch)
-- **RAM**: 4GB minimum (8GB recommended)
-- **Storage**: 500MB for models
+- **OS**: Linux, macOS, Windows (with audio support)
+- **RAM**: 1-2GB
+- **Storage**: ~50MB
 - **Audio**: Working microphone and speakers
-- **Python**: 3.10 or higher (for MCP SDK)
+- **Python**: 3.10 or higher
+- **Network**: Internet connection required for cloud services
 
 ---
 
-## Security & Privacy
+## Privacy & Data
 
-- ✅ **No data leaves your machine** (in local mode)
-- ✅ **No third-party services** required
-- ✅ **No API keys needed** (for basic operation)
-- ✅ **Open source** - audit the code yourself
+TalkToMe uses cloud services for speech processing:
+
+- **Audio data** is sent to ElevenLabs for processing
+- ElevenLabs privacy policy applies: https://elevenlabs.io/privacy
+- No audio is stored locally by TalkToMe
+- Conversation transcripts are kept in memory only (cleared on restart)
+
+If you need fully local/private processing, consider the older v2.x releases which supported local Whisper/Piper models.
 
 ---
 
