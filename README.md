@@ -152,17 +152,11 @@ Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository
 
 **Important**: For natural voice conversations, you need to allow TalkToMe tools to run without permission prompts. Otherwise, Claude will pause to ask for permission instead of speaking, breaking the conversation flow.
 
-Add the TalkToMe tools to your allowed tools list. You can do this by running these commands in Claude Code:
+Add the TalkToMe tools to your allowed tools list. You can do this by running this command in Claude Code:
 
 ```bash
-# Allow all TalkToMe MCP tools
-/allowed-tools mcp__talktome__initiate_call
-/allowed-tools mcp__talktome__continue_call
-/allowed-tools mcp__talktome__speak
-/allowed-tools mcp__talktome__report_completion
-/allowed-tools mcp__talktome__get_transcript
-/allowed-tools mcp__talktome__end_call
-/allowed-tools mcp__talktome__test_audio
+# Allow all TalkToMe MCP tools using wildcard
+/allowed-tools mcp__talktome__*
 ```
 
 Or add them to your Claude Code settings file (`~/.claude/settings.json`):
@@ -170,13 +164,7 @@ Or add them to your Claude Code settings file (`~/.claude/settings.json`):
 ```json
 {
   "allowedTools": [
-    "mcp__talktome__initiate_call",
-    "mcp__talktome__continue_call",
-    "mcp__talktome__speak",
-    "mcp__talktome__report_completion",
-    "mcp__talktome__get_transcript",
-    "mcp__talktome__end_call",
-    "mcp__talktome__test_audio"
+    "mcp__talktome__*"
   ]
 }
 ```
