@@ -1,10 +1,8 @@
-"""Provider implementations for CallMe MCP."""
+"""Provider implementations for TalkToMe MCP."""
 
 from .base import PhoneProvider, RealtimeSTTProvider, STTProvider, TTSProvider
+from .elevenlabs import ElevenLabsSTTProvider, ElevenLabsTTSProvider
 from .phone_local import LocalPhoneProvider
-from .stt_whisper import WhisperSTTProvider
-from .tts_elevenlabs import ElevenLabsTTSProvider
-from .tts_piper import PiperTTSProvider
 
 __all__ = [
     "PhoneProvider",
@@ -12,7 +10,6 @@ __all__ = [
     "STTProvider",
     "RealtimeSTTProvider",
     "LocalPhoneProvider",
-    "WhisperSTTProvider",
-    "PiperTTSProvider",
+    "ElevenLabsSTTProvider",
     "ElevenLabsTTSProvider",
 ]

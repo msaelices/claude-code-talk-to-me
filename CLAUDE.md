@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TalkToMe is a Claude Code plugin (MCP server) that enables Claude to communicate via local audio - using your computer's microphone and speakers for real-time voice conversations. Written in Python 3.10+, using the MCP SDK, and communicating via the Model Context Protocol (MCP).
+TalkToMe is a Claude Code plugin (MCP server) that enables Claude to communicate via audio - using your computer's microphone and speakers for real-time voice conversations. Written in Python 3.10+, using the MCP SDK, and communicating via the Model Context Protocol (MCP).
+
+**v3.0 is cloud-only**: Speech processing is handled by ElevenLabs cloud services for simple setup and cross-platform compatibility.
 
 ## Development Commands
 
@@ -17,13 +19,10 @@ cd server && uv pip install -e .
 uv run -m talktome_mcp.server
 ```
 
-### Model Setup
+### Prerequisites
 ```bash
-# Install prerequisites (system packages)
+# Install system audio dependencies
 ./install-prerequisites.sh
-
-# Download models
-uv run python3 download-models.py
 
 # Test audio system
 uv run python3 test-audio.py
@@ -50,19 +49,18 @@ Pre-commit hooks run automatically on `git commit` and include:
 
 ### Environment Configuration
 Copy `.env.example` to `.env.local` and configure:
-- Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
-- TTS provider (TALKTOME_TTS_PROVIDER: piper or elevenlabs)
-- STT provider (TALKTOME_STT_PROVIDER: whisper)
-- Model paths and performance settings (WHISPER_MODEL, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE)
+- **Required**: TALKTOME_ELEVENLABS_API_KEY (get from https://elevenlabs.io)
+- TTS settings (voice ID, model, stability)
+- STT settings (model, language, VAD parameters)
 
 ## Architecture
 
 ### Provider Pattern
 The codebase uses abstract provider interfaces in `server/talktome_mcp/providers/base.py`:
 - **PhoneProvider**: Abstract audio I/O interface (LocalPhoneProvider for system audio)
-- **TTSProvider**: Abstract text-to-speech (PiperTTSProvider for local, ElevenLabsTTSProvider for cloud)
-- **STTProvider**: Abstract speech-to-text (WhisperSTTProvider for local)
-- **RealtimeSTTProvider**: Extends STTProvider for streaming audio with VAD (Voice Activity Detection)
+- **TTSProvider**: Abstract text-to-speech (ElevenLabsTTSProvider for cloud)
+- **STTProvider**: Abstract speech-to-text base class
+- **RealtimeSTTProvider**: Extends STTProvider for streaming audio with VAD (ElevenLabsSTTProvider)
 
 Provider selection happens in `server.py` based on environment variables (`TALKTOME_TTS_PROVIDER`, `TALKTOME_STT_PROVIDER`).
 
@@ -77,8 +75,8 @@ Provider selection happens in `server.py` based on environment variables (`TALKT
 1. **MCP Tool Call** → `server.py` receives `initiate_call` tool request
 2. **CallManager** → `initiate_call()` starts the session, spawns background audio processing task
 3. **LocalPhoneProvider** → `phone_local.py` handles microphone/speaker I/O using sounddevice library
-4. **Audio Pipeline** → Background task streams mic audio → RealtimeSTTProvider → transcript updates
-5. **TTS Output** → `speak()` synthesizes text → sends to PhoneProvider for playback
+4. **STT Pipeline** → Background task streams mic audio → local VAD detects speech segments → ElevenLabsSTTProvider (batch API) → transcript updates
+5. **TTS Output** → `speak()` calls ElevenLabsTTSProvider (HTTP) → sends audio to PhoneProvider for playback
 
 ### MCP Tools
 Defined in `server/talktome_mcp/server.py`:
@@ -92,15 +90,22 @@ Defined in `server/talktome_mcp/server.py`:
 
 ### Audio Format
 - System audio (recording): 16-bit PCM, 16kHz mono
-- TTS output: 16-bit PCM, 22-24kHz mono
+- TTS output: 16-bit PCM, 22050Hz mono (converted from MP3)
 - STT input: 16-bit PCM, 16kHz mono
 
-### RealtimeSTTProvider Streaming
-The WhisperSTTProvider implements streaming transcription:
-- `start_stream()`: Initializes Whisper model and VAD
-- `process_audio_chunk()`: Processes audio chunks, returns transcribed text when silence is detected
-- `get_final_transcription()`: Returns any remaining buffered transcription
-- Uses `TALKTOME_STT_SILENCE_DURATION_MS` (default 800ms) to detect speech end
+### ElevenLabs STT
+The ElevenLabsSTTProvider uses the ElevenLabs Python SDK with local VAD:
+- `start_stream()`: Initializes streaming state and audio buffer
+- `process_audio_chunk()`: Uses local energy-based VAD to detect speech; accumulates audio during speech, then sends to batch API when silence is detected
+- `get_final_transcription()`: Transcribes any remaining buffered audio
+- `transcribe()`: Uses `elevenlabs.speech_to_text.convert()` for batch transcription (scribe_v2 model)
+- Local VAD uses RMS energy threshold to detect speech vs silence
+
+### ElevenLabs TTS
+The ElevenLabsTTSProvider uses the HTTP API:
+- `synthesize()`: Sends text to API, receives MP3, converts to PCM
+- Returns 22050Hz, 16-bit mono PCM audio
+- Requires ffmpeg for MP3 to PCM conversion (via pydub)
 
 ### CallManager Lifecycle
 - Only one active call at a time (tracked by `active_call_id`)
@@ -108,15 +113,16 @@ The WhisperSTTProvider implements streaming transcription:
 - Background audio processing task runs continuously while call is active
 - `processing_audio` flag prevents concurrent audio processing
 
-### Provider-Specific Details
-- **Piper TTS**: Uses ONNX models for fast neural synthesis (runs as Python module via piper-tts package)
-- **Whisper STT**: Uses faster-whisper library directly in Python (not subprocess)
-- **Local Audio**: Uses sounddevice library for cross-platform audio I/O (PortAudio wrapper)
+### Provider Files
+- `providers/base.py`: Abstract interfaces
+- `providers/phone_local.py`: Local audio I/O via sounddevice
+- `providers/elevenlabs.py`: ElevenLabs TTS (HTTP API) and STT (Python SDK with local VAD)
 
 ## Important Notes
 
 - Python 3.10+ required (for MCP SDK and async features)
 - Uses MCP SDK (mcp>=1.0.0) with FastMCP-like pattern
-- Direct Python integration with Whisper and Piper (no subprocesses)
+- Cloud-only architecture - requires ElevenLabs API key
 - Logging goes to stderr (stdout is reserved for MCP communication)
-- Models are cached in `~/.cache/huggingface/hub/` (Whisper) and local `models/` directory (Piper)
+- ffmpeg required for MP3 to PCM audio conversion
+- No local ML models or GPU required

@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from .call_manager import CallManager
-from .providers import ElevenLabsTTSProvider, LocalPhoneProvider, PiperTTSProvider, WhisperSTTProvider
+from .providers import ElevenLabsSTTProvider, ElevenLabsTTSProvider, LocalPhoneProvider
 from .utils import error_response, success_response
 
 # Load environment variables from .env and .env.local
@@ -55,39 +55,31 @@ def init_call_manager():
     global call_manager
 
     # Get provider configuration from environment
-    tts_provider_name = os.getenv("TALKTOME_TTS_PROVIDER", "piper")
-    stt_provider_name = os.getenv("TALKTOME_STT_PROVIDER", "whisper")
+    tts_provider_name = os.getenv("TALKTOME_TTS_PROVIDER", "elevenlabs")
+    stt_provider_name = os.getenv("TALKTOME_STT_PROVIDER", "elevenlabs")
 
     # Initialize providers based on configuration
     phone_provider = LocalPhoneProvider()
 
-    # TTS Provider
-    if tts_provider_name == "piper":
-        # Get TTS configuration
-        tts_config = {}
-        speed_str = os.getenv("TALKTOME_PIPER_SPEED")
-        if speed_str:
-            try:
-                tts_config["length_scale"] = float(speed_str)
-                logger.info(f"Piper TTS speed set to {speed_str}")
-            except ValueError:
-                logger.warning(f"Invalid TALKTOME_PIPER_SPEED value: {speed_str}, using default")
-
-        tts_provider = PiperTTSProvider(config=tts_config)
-    elif tts_provider_name == "elevenlabs":
+    # TTS Provider (cloud-only)
+    if tts_provider_name == "elevenlabs":
         tts_provider = ElevenLabsTTSProvider()
     else:
-        # Default to Piper if unknown
-        logger.warning(f"Unknown TTS provider: {tts_provider_name}, using Piper")
-        tts_provider = PiperTTSProvider()
+        raise ValueError(
+            f"Unknown TTS provider: {tts_provider_name}. "
+            "Supported providers: elevenlabs. "
+            "Set TALKTOME_TTS_PROVIDER=elevenlabs in your environment."
+        )
 
-    # STT Provider
-    if stt_provider_name == "whisper":
-        stt_provider = WhisperSTTProvider()
+    # STT Provider (cloud-only)
+    if stt_provider_name == "elevenlabs":
+        stt_provider = ElevenLabsSTTProvider()
     else:
-        # Default to Whisper if unknown
-        logger.warning(f"Unknown STT provider: {stt_provider_name}, using Whisper")
-        stt_provider = WhisperSTTProvider()
+        raise ValueError(
+            f"Unknown STT provider: {stt_provider_name}. "
+            "Supported providers: elevenlabs. "
+            "Set TALKTOME_STT_PROVIDER=elevenlabs in your environment."
+        )
 
     # Create call manager
     call_manager = CallManager(phone_provider=phone_provider, tts_provider=tts_provider, stt_provider=stt_provider)
@@ -307,10 +299,10 @@ async def cleanup():
 
 def main():
     """Main entry point for the MCP server."""
-    logger.info("Starting TalkToMe MCP Server v2.0.0")
+    logger.info("Starting TalkToMe MCP Server v3.0.0")
 
     # Print initialization message to stderr
-    print("TalkToMe Local Audio Communication", file=sys.stderr)
+    print("TalkToMe Cloud Audio Communication", file=sys.stderr)
     print("================================", file=sys.stderr)
     print("Ready for voice communication!", file=sys.stderr)
     print("", file=sys.stderr)

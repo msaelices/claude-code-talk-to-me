@@ -6,12 +6,12 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from .providers import (
+    ElevenLabsSTTProvider,
+    ElevenLabsTTSProvider,
     LocalPhoneProvider,
     PhoneProvider,
-    PiperTTSProvider,
     RealtimeSTTProvider,
     TTSProvider,
-    WhisperSTTProvider,
 )
 from .utils import error_response, success_response
 
@@ -42,8 +42,8 @@ class CallManager:
             transcript_timeout_ms: Timeout for waiting for user speech
         """
         self.phone_provider = phone_provider or LocalPhoneProvider()
-        self.tts_provider = tts_provider or PiperTTSProvider()
-        self.stt_provider = stt_provider or WhisperSTTProvider()
+        self.tts_provider = tts_provider or ElevenLabsTTSProvider()
+        self.stt_provider = stt_provider or ElevenLabsSTTProvider()
         self.transcript_timeout_ms = transcript_timeout_ms
 
         self.active_call_id: Optional[str] = None
