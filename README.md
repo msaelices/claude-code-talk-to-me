@@ -26,10 +26,23 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 
 ## Quick Start
 
-### 1. Prerequisites (Linux)
+### 1. Install System Dependencies (Required)
 
+TalkToMe requires audio and Python packages that must be installed via your system package manager:
+
+**Ubuntu/Debian:**
 ```bash
 sudo apt-get install pulseaudio-utils python3 python3-pip ffmpeg
+```
+
+**Fedora:**
+```bash
+sudo dnf install pulseaudio-utils python3 python3-pip ffmpeg
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S pulseaudio python python-pip ffmpeg
 ```
 
 ### 2. Install via Claude Code Marketplace
