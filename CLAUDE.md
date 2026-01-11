@@ -25,9 +25,6 @@ uv run -m talktome_mcp.server
 # Linux (Ubuntu/Debian): sudo apt-get install ffmpeg
 # Linux (Fedora): sudo dnf install ffmpeg
 # macOS: brew install ffmpeg
-
-# Test audio system
-uv run python3 test-audio.py
 ```
 
 ### Code Quality
