@@ -1,6 +1,6 @@
 {
   "name": "talktome",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Claude communicates with you through your computer's microphone and speakers for real-time voice conversations",
   "author": {
     "name": "TalkToMe Contributors",
