@@ -49,105 +49,7 @@ sudo apt-get install pulseaudio-utils python3 python3-pip ffmpeg
 
 That's it! Ask Claude to use TalkToMe and start talking.
 
----
-
-## Manual Installation
-
-If the marketplace installation doesn't work or you need more control, follow these steps:
-
-<details>
-<summary><b>Click to expand manual installation steps</b></summary>
-
-### 1. Install System Requirements
-
-**Linux** (Ubuntu/Debian/Fedora):
-```bash
-# Install audio system (if not already present)
-sudo apt-get install pulseaudio-utils  # Or pipewire-pulse for PipeWire
-
-# Install Python 3.10+
-sudo apt-get install python3 python3-pip
-
-# Install ffmpeg (optional, for audio format conversion)
-sudo apt-get install ffmpeg
-```
-
-### 2. Clone and Install
-
-```bash
-# Clone the repository
-git clone https://github.com/msaelices/claude-code-talk-to-me.git
-cd claude-code-talk-to-me
-
-# Run the installation script
-./install-prerequisites.sh
-```
-
-### 3. Configure Environment (Optional)
-
-```bash
-cp .env.example .env.local
-nano .env.local
-```
-
-Basic configuration (defaults work for most):
-```env
-TALKTOME_AUDIO_SYSTEM=pulseaudio
-TALKTOME_TTS_PROVIDER=piper
-TALKTOME_PIPER_SPEED=0.85
-TALKTOME_STT_PROVIDER=whisper
-TALKTOME_WHISPER_MODEL=base
-```
-
-### 4. Add to Claude Code Config
-
-Add to `~/.config/claude-code/config.json`:
-
-```json
-{
-  "mcpServers": {
-    "talktome": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/claude-code-talk-to-me/server",
-        "-m",
-        "talktome_mcp.server"
-      ],
-      "env": {
-        "TALKTOME_AUDIO_SYSTEM": "pulseaudio",
-        "TALKTOME_TTS_PROVIDER": "piper",
-        "TALKTOME_STT_PROVIDER": "whisper",
-        "TALKTOME_WHISPER_MODEL": "base"
-      }
-    }
-  }
-}
-```
-
-Replace `/path/to/claude-code-talk-to-me` with the actual path.
-
-### 5. Configure Permissions
-
-```
-/allowed-tools mcp__talktome__*
-```
-
-Or add to `~/.claude/settings.json`:
-```json
-{
-  "allowedTools": ["mcp__talktome__*"]
-}
-```
-
-### 6. (Optional) Test the Server
-
-```bash
-cd server && uv run -m talktome_mcp.server
-```
-
-</details>
+> **Having issues?** See [CONTRIBUTING.md](CONTRIBUTING.md) for manual installation and debugging.
 
 ---
 
@@ -500,17 +402,12 @@ echo "TALKTOME_PIPER_MODEL_PATH=models/piper/en_US-lessac-medium.onnx" >> .env.l
 
 ## Development
 
-```bash
-cd server
-pip install -e .  # Install dependencies (auto-installed when running as plugin)
-uv run -m talktome_mcp.server    # Run the server
-```
-
-To add new TTS/STT providers:
-1. Create provider in `server/talktome_mcp/providers/`
-2. Implement the provider interface in `providers/base.py`
-3. Update `providers/__init__.py`
-4. Add configuration to `.env.example`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup
+- Manual installation for debugging
+- Testing and debugging guides
+- How to add new TTS/STT providers
+- Code style and PR process
 
 ---
 
