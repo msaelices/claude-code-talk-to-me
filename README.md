@@ -112,16 +112,11 @@ TALKTOME_WHISPER_MODEL=base
 TALKTOME_TRANSCRIPT_TIMEOUT_MS=180000
 ```
 
-### 6. Install the Python MCP Server
+### 6. Install in Claude Code
 
-```bash
-cd server
-uv pip install -e .
-```
+Add the MCP server to your Claude Code configuration (`~/.config/claude-code/config.json`).
 
-### 7. Install in Claude Code
-
-Add the MCP server to your Claude Code configuration (`~/.config/claude-code/config.json`):
+> **Note**: Python dependencies are automatically installed when the MCP server starts, so no manual `pip install` is required.
 
 ```json
 {
@@ -148,7 +143,7 @@ Add the MCP server to your Claude Code configuration (`~/.config/claude-code/con
 
 Replace `/path/to/claude-code-talk-to-me` with the actual path to the repository.
 
-### 8. Configure Permissions for Natural Conversations
+### 7. Configure Permissions for Natural Conversations
 
 **Important**: For natural voice conversations, you need to allow TalkToMe tools to run without permission prompts. Otherwise, Claude will pause to ask for permission instead of speaking, breaking the conversation flow.
 
@@ -209,7 +204,7 @@ If you prefer not to use YOLO mode, you can create a hook that plays a sound whe
 }
 ```
 
-### 9. (Optional) Add the Skill for Better Claude Integration
+### 8. (Optional) Add the Skill for Better Claude Integration
 
 The TalkToMe skill provides Claude with built-in instructions on when and how to use voice communication effectively.
 
@@ -232,7 +227,7 @@ cp -r /path/to/claude-code-talk-to-me/skills/talk-to-me ~/.claude/skills/
 - Provides usage examples and conversation patterns
 - Ensures Claude uses voice tools appropriately during active calls
 
-### 10. Run the Server (for testing)
+### 9. Run the Server (for testing)
 
 ```bash
 uv run -m talktome_mcp.server
@@ -555,7 +550,7 @@ echo "TALKTOME_PIPER_MODEL_PATH=models/piper/en_US-lessac-medium.onnx" >> .env.l
 
 ```bash
 cd server
-uv pip install -e .  # Install dependencies
+pip install -e .  # Install dependencies (auto-installed when running as plugin)
 uv run -m talktome_mcp.server    # Run the server
 ```
 
