@@ -30,7 +30,6 @@
 - `server/pyproject.toml` - Removed torch, faster-whisper, piper-tts, silero-vad; added websockets; bumped to v3.0.0
 - `server/talktome_mcp/server.py` - Changed defaults to ElevenLabs
 - `server/talktome_mcp/call_manager.py` - Updated default providers
-- `install-prerequisites.sh` - Simplified for audio-only dependencies
 - `README.md` - Complete rewrite for cloud-only setup with pricing info
 - `.env.example` - Rewritten for ElevenLabs configuration
 - `CLAUDE.md` - Updated architecture documentation

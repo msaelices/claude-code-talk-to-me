@@ -21,8 +21,10 @@ uv run -m talktome_mcp.server
 
 ### Prerequisites
 ```bash
-# Install system audio dependencies
-./install-prerequisites.sh
+# Install ffmpeg (required for audio conversion)
+# Linux (Ubuntu/Debian): sudo apt-get install ffmpeg
+# Linux (Fedora): sudo dnf install ffmpeg
+# macOS: brew install ffmpeg
 
 # Test audio system
 uv run python3 test-audio.py
