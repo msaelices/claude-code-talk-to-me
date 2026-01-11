@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import Any, AsyncGenerator, Dict, Optional
 
 from ..utils import split_into_sentences
 

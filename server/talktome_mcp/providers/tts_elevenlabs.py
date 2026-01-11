@@ -3,7 +3,7 @@
 import io
 import logging
 import os
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from .base import TTSProvider
 
@@ -17,9 +17,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         config = config or {}
 
         # Get API key from config, env var, or raise error
-        self.api_key = config.get('api_key',
-                                  os.getenv('TALKTOME_ELEVENLABS_API_KEY',
-                                           os.getenv('ELEVENLABS_API_KEY')))
+        self.api_key = config.get("api_key", os.getenv("TALKTOME_ELEVENLABS_API_KEY", os.getenv("ELEVENLABS_API_KEY")))
 
         if not self.api_key:
             raise ValueError(
@@ -28,14 +26,14 @@ class ElevenLabsTTSProvider(TTSProvider):
             )
 
         # Voice configuration
-        self.voice_id = config.get('voice_id',
-                                   os.getenv('TALKTOME_ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM'))  # Default: "Rachel"
-        self.model_id = config.get('model_id',
-                                   os.getenv('TALKTOME_ELEVENLABS_MODEL_ID', 'eleven_multilingual_v2'))  # Default: Multilingual v2
-        self.stability = config.get('stability',
-                                    os.getenv('TALKTOME_ELEVENLABS_STABILITY'))
-        self.similarity_boost = config.get('similarity_boost',
-                                           os.getenv('TALKTOME_ELEVENLABS_SIMILARITY_BOOST'))
+        self.voice_id = config.get(
+            "voice_id", os.getenv("TALKTOME_ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+        )  # Default: "Rachel"
+        self.model_id = config.get(
+            "model_id", os.getenv("TALKTOME_ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+        )  # Default: Multilingual v2
+        self.stability = config.get("stability", os.getenv("TALKTOME_ELEVENLABS_STABILITY"))
+        self.similarity_boost = config.get("similarity_boost", os.getenv("TALKTOME_ELEVENLABS_SIMILARITY_BOOST"))
 
         # API endpoint
         self.base_url = "https://api.elevenlabs.io/v1"
@@ -53,7 +51,7 @@ class ElevenLabsTTSProvider(TTSProvider):
             Audio data as bytes (PCM 16-bit, 22050Hz mono)
         """
         if not text or not text.strip():
-            return b''
+            return b""
 
         import aiohttp
 
@@ -68,27 +66,21 @@ class ElevenLabsTTSProvider(TTSProvider):
         # Add optional voice settings
         voice_settings = {}
         if self.stability is not None:
-            voice_settings['stability'] = float(self.stability)
+            voice_settings["stability"] = float(self.stability)
         if self.similarity_boost is not None:
-            voice_settings['similarity_boost'] = float(self.similarity_boost)
+            voice_settings["similarity_boost"] = float(self.similarity_boost)
 
         if voice_settings:
-            payload['voice_settings'] = voice_settings
+            payload["voice_settings"] = voice_settings
 
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": self.api_key
-        }
+        headers = {"Accept": "audio/mpeg", "Content-Type": "application/json", "xi-api-key": self.api_key}
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload, headers=headers) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        raise RuntimeError(
-                            f"ElevenLabs API error (status {response.status}): {error_text}"
-                        )
+                        raise RuntimeError(f"ElevenLabs API error (status {response.status}): {error_text}")
 
                     # ElevenLabs returns MP3 audio
                     mp3_data = await response.read()
@@ -111,9 +103,7 @@ class ElevenLabsTTSProvider(TTSProvider):
         try:
             from pydub import AudioSegment
         except ImportError:
-            raise RuntimeError(
-                "pydub is required for MP3 conversion. Install it with: pip install pydub"
-            )
+            raise RuntimeError("pydub is required for MP3 conversion. Install it with: pip install pydub")
 
         # Convert MP3 to audio segment (in memory, no temp files)
         audio = AudioSegment.from_mp3(io.BytesIO(mp3_data))
@@ -123,6 +113,6 @@ class ElevenLabsTTSProvider(TTSProvider):
 
         # Export as raw PCM (use s16le format directly instead of raw with codec)
         pcm_io = io.BytesIO()
-        audio.export(pcm_io, format='s16le')
+        audio.export(pcm_io, format="s16le")
 
         return pcm_io.getvalue()

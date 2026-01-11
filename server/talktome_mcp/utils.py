@@ -14,7 +14,7 @@ def success_response(data: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[st
     Returns:
         Dict with success=True and any additional data
     """
-    result = {'success': True}
+    result = {"success": True}
     if data:
         result.update(data)
     result.update(kwargs)
@@ -31,7 +31,7 @@ def error_response(error: str, **kwargs) -> Dict[str, Any]:
     Returns:
         Dict with success=False and error message
     """
-    result = {'success': False, 'error': error}
+    result = {"success": False, "error": error}
     result.update(kwargs)
     return result
 
@@ -45,5 +45,5 @@ def split_into_sentences(text: str) -> list[str]:
     Returns:
         List of sentences
     """
-    sentences = re.findall(r'[^.!?]+[.!?]+|[^.!?]+$', text)
+    sentences = re.findall(r"[^.!?]+[.!?]+|[^.!?]+$", text)
     return [s.strip() for s in sentences if s.strip()]

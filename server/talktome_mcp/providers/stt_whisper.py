@@ -1,14 +1,12 @@
 """Whisper STT provider using faster-whisper."""
 
-import asyncio
 import logging
 import os
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 import numpy as np
-from faster_whisper import WhisperModel
 import torch
-import io
-import wave
+from faster_whisper import WhisperModel
 
 from .base import RealtimeSTTProvider
 
@@ -22,38 +20,34 @@ class WhisperSTTProvider(RealtimeSTTProvider):
         config = config or {}
 
         # Model configuration
-        self.model_name = config.get('model_name', os.getenv('TALKTOME_WHISPER_MODEL', 'base'))
-        self.device = config.get('device', os.getenv('TALKTOME_WHISPER_DEVICE', 'auto'))
-        self.compute_type = config.get('compute_type', os.getenv('TALKTOME_WHISPER_COMPUTE_TYPE', 'auto'))
+        self.model_name = config.get("model_name", os.getenv("TALKTOME_WHISPER_MODEL", "base"))
+        self.device = config.get("device", os.getenv("TALKTOME_WHISPER_DEVICE", "auto"))
+        self.compute_type = config.get("compute_type", os.getenv("TALKTOME_WHISPER_COMPUTE_TYPE", "auto"))
 
         # Detection configuration
-        self.chunk_duration_ms = config.get('chunk_duration_ms', 2000)
-        self.silence_duration_ms = config.get('silence_duration_ms',
-                                             int(os.getenv('TALKTOME_STT_SILENCE_DURATION_MS', '800')))
-        self.vad_threshold = config.get('vad_threshold',
-                                        float(os.getenv('TALKTOME_STT_VAD_THRESHOLD', '0.5')))
-        self.transcription_cooldown_ms = config.get('transcription_cooldown_ms', 1000)  # 1 second cooldown
+        self.chunk_duration_ms = config.get("chunk_duration_ms", 2000)
+        self.silence_duration_ms = config.get(
+            "silence_duration_ms", int(os.getenv("TALKTOME_STT_SILENCE_DURATION_MS", "800"))
+        )
+        self.vad_threshold = config.get("vad_threshold", float(os.getenv("TALKTOME_STT_VAD_THRESHOLD", "0.5")))
+        self.transcription_cooldown_ms = config.get("transcription_cooldown_ms", 1000)  # 1 second cooldown
 
         # Auto-detect device if needed
-        if self.device == 'auto':
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if self.device == "auto":
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Auto-detect compute type
-        if self.compute_type == 'auto':
-            if self.device == 'cuda':
-                self.compute_type = 'float16'
+        if self.compute_type == "auto":
+            if self.device == "cuda":
+                self.compute_type = "float16"
             else:
-                self.compute_type = 'int8'
+                self.compute_type = "int8"
 
         logger.info(f"Loading Whisper model: {self.model_name} on {self.device} with {self.compute_type}")
         logger.info(f"VAD threshold: {self.vad_threshold}")
 
         # Initialize model
-        self.model = WhisperModel(
-            self.model_name,
-            device=self.device,
-            compute_type=self.compute_type
-        )
+        self.model = WhisperModel(self.model_name, device=self.device, compute_type=self.compute_type)
 
         # Initialize VAD
         try:
@@ -75,10 +69,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
         """Initialize Silero VAD model."""
         try:
             model, utils = torch.hub.load(
-                repo_or_dir='snakers4/silero-vad',
-                model='silero_vad',
-                force_reload=False,
-                trust_repo=True
+                repo_or_dir="snakers4/silero-vad", model="silero_vad", force_reload=False, trust_repo=True
             )
             self.vad_model = model
             self.get_speech_timestamps = utils[0]
@@ -93,14 +84,11 @@ class WhisperSTTProvider(RealtimeSTTProvider):
 
         # Run transcription
         segments, info = self.model.transcribe(
-            audio_array,
-            beam_size=5,
-            language='en',
-            vad_filter=True if self.vad_model else False
+            audio_array, beam_size=5, language="en", vad_filter=True if self.vad_model else False
         )
 
         # Combine segments
-        transcription = ' '.join(segment.text.strip() for segment in segments)
+        transcription = " ".join(segment.text.strip() for segment in segments)
         return transcription
 
     async def start_stream(self) -> None:
@@ -151,7 +139,7 @@ class WhisperSTTProvider(RealtimeSTTProvider):
             has_speech = False
 
             for i in range(0, len(audio_array), chunk_size):
-                chunk = audio_array[i:i + chunk_size]
+                chunk = audio_array[i : i + chunk_size]
 
                 # Skip incomplete chunks
                 if len(chunk) != chunk_size:
