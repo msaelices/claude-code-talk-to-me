@@ -32,23 +32,21 @@ class LocalCall(Call):
 
     def start_recording(self):
         """Start recording audio from microphone."""
+
         def callback(indata, frames, time, status):
             if status:
                 logger.warning(f"Recording status: {status}")
             if self.recording:
                 # Convert to bytes and put in async queue
                 audio_bytes = (indata * 32767).astype(np.int16).tobytes()
-                asyncio.run_coroutine_threadsafe(
-                    self.audio_queue.put(audio_bytes),
-                    self.event_loop
-                )
+                asyncio.run_coroutine_threadsafe(self.audio_queue.put(audio_bytes), self.event_loop)
 
         self.stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
             callback=callback,
-            dtype='float32',
-            blocksize=int(self.sample_rate * 0.1)  # 100ms chunks
+            dtype="float32",
+            blocksize=int(self.sample_rate * 0.1),  # 100ms chunks
         )
         self.stream.start()
 
@@ -63,18 +61,19 @@ class LocalCall(Call):
     def stop_recording(self):
         """Stop recording audio."""
         self.recording = False
-        if hasattr(self, 'stream'):
+        if hasattr(self, "stream"):
             self.stream.stop()
             self.stream.close()
 
     def start_playback(self):
         """Start playback thread for audio output."""
+
         def playback_worker():
             logger.info(f"[{self.id}] Playback thread started")
             with sd.OutputStream(
                 samplerate=22050,  # Piper TTS outputs at 22050Hz
                 channels=1,
-                dtype='int16'
+                dtype="int16",
             ) as stream:
                 while self.active:
                     try:
@@ -199,10 +198,7 @@ class LocalPhoneProvider(PhoneProvider):
         while call.active:
             try:
                 # Get audio chunk with timeout
-                audio = await asyncio.wait_for(
-                    call.audio_queue.get(),
-                    timeout=0.1
-                )
+                audio = await asyncio.wait_for(call.audio_queue.get(), timeout=0.1)
                 yield audio
             except asyncio.TimeoutError:
                 continue

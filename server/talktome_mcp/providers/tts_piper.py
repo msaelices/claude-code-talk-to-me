@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from .base import TTSProvider
 
@@ -19,11 +19,10 @@ class PiperTTSProvider(TTSProvider):
         config = config or {}
 
         # Model configuration - resolve relative to server directory or project root
-        default_model = Path('models/piper/en_US-amy-medium.onnx')
+        default_model = Path("models/piper/en_US-amy-medium.onnx")
 
         # Get model path from config, env var, or default
-        model_path_str = config.get('model_path',
-                                    os.getenv('TALKTOME_PIPER_MODEL_PATH', str(default_model)))
+        model_path_str = config.get("model_path", os.getenv("TALKTOME_PIPER_MODEL_PATH", str(default_model)))
         self.model_path = Path(model_path_str)
 
         # If relative path and doesn't exist, try resolving from project root
@@ -40,10 +39,10 @@ class PiperTTSProvider(TTSProvider):
                 self.model_path = alternative_path
 
         # Voice parameters
-        self.speaker_id = config.get('speaker_id')
-        self.length_scale = config.get('length_scale')  # Speaking rate
-        self.noise_scale = config.get('noise_scale')    # Variation in speech
-        self.noise_w = config.get('noise_w')            # Phoneme duration variation
+        self.speaker_id = config.get("speaker_id")
+        self.length_scale = config.get("length_scale")  # Speaking rate
+        self.noise_scale = config.get("noise_scale")  # Variation in speech
+        self.noise_w = config.get("noise_w")  # Phoneme duration variation
 
         # Verify model exists
         if not self.model_path.exists():
@@ -68,50 +67,55 @@ class PiperTTSProvider(TTSProvider):
         import tempfile
 
         # Create a temporary file for input text
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write(text)
             input_file = f.name
 
         # Create a temporary file for output audio
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             output_file = f.name
 
         try:
             # Build command arguments
-            cmd = [sys.executable, '-m', 'piper',
-                   '-m', str(self.model_path),
-                   '-i', input_file,  # Input file
-                   '-o', output_file,  # Output file
-                   '--quiet']          # Suppress progress output
+            cmd = [
+                sys.executable,
+                "-m",
+                "piper",
+                "-m",
+                str(self.model_path),
+                "-i",
+                input_file,  # Input file
+                "-o",
+                output_file,  # Output file
+                "--quiet",
+            ]  # Suppress progress output
 
             # Debug: log the command
             logger.debug(f"Running Piper command: {' '.join(cmd)}")
 
             # Add optional voice parameters
             if self.speaker_id is not None:
-                cmd.extend(['--speaker', str(self.speaker_id)])
+                cmd.extend(["--speaker", str(self.speaker_id)])
             if self.length_scale is not None:
-                cmd.extend(['--length-scale', str(self.length_scale)])
+                cmd.extend(["--length-scale", str(self.length_scale)])
             if self.noise_scale is not None:
-                cmd.extend(['--noise-scale', str(self.noise_scale)])
+                cmd.extend(["--noise-scale", str(self.noise_scale)])
             if self.noise_w is not None:
-                cmd.extend(['--noise-w', str(self.noise_w)])
+                cmd.extend(["--noise-w", str(self.noise_w)])
 
             # Run Piper asynchronously
             process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
 
             stdout, stderr = await process.communicate()
 
             if process.returncode != 0:
-                error_msg = stderr.decode('utf-8') if stderr else 'Unknown error'
+                error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
                 raise RuntimeError(f"Piper synthesis failed: {error_msg}")
 
             # Read the output WAV file and extract PCM data
-            with open(output_file, 'rb') as f:
+            with open(output_file, "rb") as f:
                 # Skip WAV header (44 bytes) and return raw PCM
                 f.seek(44)
                 audio_data = f.read()

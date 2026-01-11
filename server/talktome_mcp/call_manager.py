@@ -30,7 +30,7 @@ class CallManager:
         phone_provider: Optional[PhoneProvider] = None,
         tts_provider: Optional[TTSProvider] = None,
         stt_provider: Optional[RealtimeSTTProvider] = None,
-        transcript_timeout_ms: int = DEFAULT_TRANSCRIPT_TIMEOUT_MS
+        transcript_timeout_ms: int = DEFAULT_TRANSCRIPT_TIMEOUT_MS,
     ):
         """
         Initialize call manager with providers.
@@ -64,7 +64,7 @@ class CallManager:
             Call status information
         """
         if self.active_call_id:
-            return error_response('A call is already active', call_id=self.active_call_id)
+            return error_response("A call is already active", call_id=self.active_call_id)
 
         try:
             # Start the call
@@ -82,9 +82,7 @@ class CallManager:
             logger.info(f"Call initiated: {call_id}")
 
             return success_response(
-                call_id=call_id,
-                status='Call initiated successfully',
-                timestamp=datetime.now().isoformat()
+                call_id=call_id, status="Call initiated successfully", timestamp=datetime.now().isoformat()
             )
 
         except Exception as e:
@@ -102,11 +100,11 @@ class CallManager:
             Operation status
         """
         if not self.active_call_id:
-            return error_response('No active call')
+            return error_response("No active call")
 
         try:
             # Add to transcript
-            self._add_transcript_entry('assistant', text)
+            self._add_transcript_entry("assistant", text)
 
             # Pause recording to prevent audio feedback/echo
             await self.phone_provider.pause_recording(self.active_call_id)
@@ -115,7 +113,7 @@ class CallManager:
             logger.info(f"Synthesizing: {text}")
 
             # Use streaming if available for lower latency
-            if hasattr(self.tts_provider, 'synthesize_stream'):
+            if hasattr(self.tts_provider, "synthesize_stream"):
                 async for audio_chunk in self.tts_provider.synthesize_stream(text):
                     await self.phone_provider.send_audio(self.active_call_id, audio_chunk)
                     # Wait for this chunk to finish playing before sending the next one
@@ -129,7 +127,7 @@ class CallManager:
             # Resume recording after speech completes
             await self.phone_provider.resume_recording(self.active_call_id)
 
-            return success_response(status='Speech sent successfully')
+            return success_response(status="Speech sent successfully")
 
         except Exception as e:
             logger.error(f"Failed to speak: {e}")
@@ -145,9 +143,7 @@ class CallManager:
             Transcript data
         """
         return success_response(
-            transcript=self.call_transcript,
-            call_active=self.call_active,
-            call_id=self.active_call_id
+            transcript=self.call_transcript, call_active=self.call_active, call_id=self.active_call_id
         )
 
     async def end_call(self) -> Dict[str, Any]:
@@ -158,7 +154,7 @@ class CallManager:
             Call summary
         """
         if not self.active_call_id:
-            return error_response('No active call')
+            return error_response("No active call")
 
         try:
             # Stop audio processing
@@ -167,7 +163,7 @@ class CallManager:
             # Get final transcription
             final_text = await self.stt_provider.get_final_transcription()
             if final_text:
-                self._add_transcript_entry('user', final_text)
+                self._add_transcript_entry("user", final_text)
 
             # Stop STT stream
             await self.stt_provider.stop_stream()
@@ -180,7 +176,7 @@ class CallManager:
                 call_id=self.active_call_id,
                 duration=self._calculate_duration(),
                 transcript=self.call_transcript,
-                timestamp=datetime.now().isoformat()
+                timestamp=datetime.now().isoformat(),
             )
 
             # Clear state
@@ -211,7 +207,7 @@ class CallManager:
 
                 if text:
                     # Add to transcript
-                    self._add_transcript_entry('user', text)
+                    self._add_transcript_entry("user", text)
                     logger.info(f"User said: {text}")
 
                     # Signal that transcription is available
@@ -250,10 +246,7 @@ class CallManager:
 
         # Wait for transcription or timeout
         try:
-            await asyncio.wait_for(
-                self._transcription_event.wait(),
-                timeout=timeout_sec
-            )
+            await asyncio.wait_for(self._transcription_event.wait(), timeout=timeout_sec)
         except asyncio.TimeoutError:
             logger.warning(f"Listen timeout after {timeout_ms}ms")
             raise
@@ -284,11 +277,7 @@ class CallManager:
             role: The speaker role ('user' or 'assistant')
             text: The spoken text
         """
-        self.call_transcript.append({
-            'role': role,
-            'text': text,
-            'timestamp': datetime.now().isoformat()
-        })
+        self.call_transcript.append({"role": role, "text": text, "timestamp": datetime.now().isoformat()})
 
     def _calculate_duration(self) -> str:
         """Calculate call duration from transcript timestamps."""
@@ -296,8 +285,8 @@ class CallManager:
             return "0:00"
 
         try:
-            first_time = datetime.fromisoformat(self.call_transcript[0]['timestamp'])
-            last_time = datetime.fromisoformat(self.call_transcript[-1]['timestamp'])
+            first_time = datetime.fromisoformat(self.call_transcript[0]["timestamp"])
+            last_time = datetime.fromisoformat(self.call_transcript[-1]["timestamp"])
             duration = last_time - first_time
             minutes = int(duration.total_seconds() // 60)
             seconds = int(duration.total_seconds() % 60)
