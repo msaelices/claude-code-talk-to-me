@@ -54,7 +54,18 @@ sudo pacman -S pulseaudio python python-pip ffmpeg
 
 > **Note**: First startup downloads models (~140 MB). Subsequent starts are instant.
 
-### 3. Configure Permissions
+### 3. (Optional) Configure Models
+
+Before starting Claude, you can set environment variables to choose different models:
+
+```bash
+export TALKTOME_WHISPER_MODEL=small      # Default: base (options: tiny, base, small, medium, large-v3)
+export TALKTOME_PIPER_VOICE=en_US-danny-low  # Default: en_US-amy-medium
+```
+
+Skip this step to use the recommended defaults.
+
+### 4. Configure Permissions
 
 ```
 /allowed-tools mcp__talktome__*
