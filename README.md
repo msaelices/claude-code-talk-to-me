@@ -17,8 +17,8 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 
 - 🎙️ **Local Speech-to-Text** using Whisper
 - 🔊 **Text-to-Speech** using Piper neural TTS (local) or ElevenLabs (cloud)
-- 🎧 **System Audio Integration** - Works with PulseAudio, PipeWire, or ALSA
-- 💻 **Cross-Platform** - Linux support (Windows/Mac with modifications)
+- 🎧 **System Audio Integration** - Works with PulseAudio, PipeWire, ALSA (Linux) or CoreAudio (macOS)
+- 💻 **Cross-Platform** - Linux and macOS support
 - 🔒 **Privacy** - All processing can be done locally without cloud services
 - ⚡ **Fast** - Sub-second response times with local models
 
@@ -27,6 +27,19 @@ Have natural voice conversations with Claude using local audio. Start a task, wa
 ## Quick Start
 
 ### 1. Install System Requirements
+
+**macOS**:
+```bash
+# Install Homebrew (if not already present)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Python 3.10+ and uv
+brew install python@3.10
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install PortAudio and ffmpeg
+brew install portaudio ffmpeg
+```
 
 **Linux** (Ubuntu/Debian/Fedora):
 ```bash
@@ -93,8 +106,8 @@ nano .env.local
 
 Basic configuration (defaults work for most):
 ```env
-# Audio system (pulseaudio, pipewire, or alsa)
-TALKTOME_AUDIO_SYSTEM=pulseaudio
+# Audio system (auto-detected: coreaudio on macOS, pulseaudio/pipewire/alsa on Linux)
+TALKTOME_AUDIO_SYSTEM=auto
 
 # TTS provider (piper for local, elevenlabs for cloud)
 TALKTOME_TTS_PROVIDER=piper
@@ -136,7 +149,7 @@ Add the MCP server to your Claude Code configuration (`~/.config/claude-code/con
         "talktome_mcp.server"
       ],
       "env": {
-        "TALKTOME_AUDIO_SYSTEM": "pulseaudio",
+        "TALKTOME_AUDIO_SYSTEM": "auto",
         "TALKTOME_TTS_PROVIDER": "piper",
         "TALKTOME_STT_PROVIDER": "whisper",
         "TALKTOME_WHISPER_MODEL": "base"
@@ -190,6 +203,7 @@ This skips all permission prompts, allowing Claude to work autonomously while yo
 
 If you prefer not to use YOLO mode, you can create a hook that plays a sound when Claude needs input. This way, you'll hear an alert even when away from your desk:
 
+**Linux:**
 ```json
 // In ~/.claude/settings.json
 {
@@ -201,6 +215,26 @@ If you prefer not to use YOLO mode, you can create a hook that plays a sound whe
           {
             "type": "command",
             "command": "paplay /usr/share/sounds/freedesktop/stereo/bell.oga"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**macOS:**
+```json
+// In ~/.claude/settings.json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff"
           }
         ]
       }
@@ -468,6 +502,8 @@ TALKTOME_WHISPER_DEVICE=cuda  # If you have NVIDIA GPU
 ## Troubleshooting
 
 ### No Audio Output
+
+**Linux:**
 ```bash
 # Check audio devices
 pactl info | grep "Default Sink"
@@ -476,13 +512,33 @@ pactl info | grep "Default Sink"
 speaker-test -t wav -c 2
 ```
 
+**macOS:**
+```bash
+# List audio devices
+system_profiler SPAudioDataType
+
+# Test speakers (plays a sound)
+afplay /System/Library/Sounds/Glass.aiff
+```
+
 ### No Audio Input
+
+**Linux:**
 ```bash
 # Check microphone
 pactl info | grep "Default Source"
 
 # Test recording
 arecord -d 5 test.wav && aplay test.wav
+```
+
+**macOS:**
+```bash
+# Check microphone permissions in System Preferences > Privacy & Security > Microphone
+# Ensure your terminal app has microphone access
+
+# Test recording (requires sox: brew install sox)
+rec -d 5 test.wav && afplay test.wav
 ```
 
 ### Whisper Model Not Loading
@@ -569,11 +625,12 @@ To add new TTS/STT providers:
 
 ## System Requirements
 
-- **OS**: Linux (Ubuntu/Debian/Fedora/Arch)
+- **OS**: Linux (Ubuntu/Debian/Fedora/Arch) or macOS (10.15+)
 - **RAM**: 4GB minimum (8GB recommended)
 - **Storage**: 500MB for models
 - **Audio**: Working microphone and speakers
 - **Python**: 3.10 or higher (for MCP SDK)
+- **macOS only**: Homebrew, PortAudio (`brew install portaudio`)
 
 ---
 

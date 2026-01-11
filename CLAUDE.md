@@ -31,7 +31,7 @@ uv run python3 test-audio.py
 
 ### Environment Configuration
 Copy `.env.example` to `.env.local` and configure:
-- Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
+- Audio system (TALKTOME_AUDIO_SYSTEM: auto, pulseaudio, pipewire, alsa on Linux; coreaudio on macOS)
 - TTS provider (TALKTOME_TTS_PROVIDER: piper or elevenlabs)
 - STT provider (TALKTOME_STT_PROVIDER: whisper)
 - Model paths and performance settings (WHISPER_MODEL, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE)
