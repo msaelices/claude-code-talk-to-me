@@ -174,6 +174,8 @@ Or add them to your Claude Code settings file (`~/.claude/settings.json`):
 - While waiting for permission, the voice output won't reach you
 - This creates awkward pauses and breaks the natural conversation flow
 
+Even after allowing the MCP tools, Claude may still ask for permission for specific actions if your overall settings are restrictive. To ensure smooth operation, consider the following options:
+
 **For truly hands-free operation**, consider running Claude Code in "YOLO mode":
 
 ```bash
