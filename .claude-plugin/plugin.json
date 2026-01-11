@@ -13,7 +13,7 @@
   "mcpServers": {
     "talktome": {
       "command": "bash",
-      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT}/server && python3 -m talktome_mcp.server"],
+      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT}/server && pip install -e . --quiet 2>/dev/null; python3 -m talktome_mcp.server"],
       "env": {
         "TALKTOME_AUDIO_SYSTEM": "${TALKTOME_AUDIO_SYSTEM:-pulseaudio}",
         "TALKTOME_TTS_PROVIDER": "${TALKTOME_TTS_PROVIDER:-piper}",
