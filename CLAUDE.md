@@ -29,6 +29,25 @@ uv run python3 download-models.py
 uv run python3 test-audio.py
 ```
 
+### Code Quality
+```bash
+# Install pre-commit hooks (first time setup)
+pre-commit install
+
+# Run linting manually
+ruff check server/
+
+# Run linting with auto-fix
+ruff check --fix server/
+
+# Run formatting
+ruff format server/
+```
+
+Pre-commit hooks run automatically on `git commit` and include:
+- **ruff**: Fast Python linter with auto-fix (`--fix`)
+- **ruff-format**: Code formatter (Black-compatible)
+
 ### Environment Configuration
 Copy `.env.example` to `.env.local` and configure:
 - Audio system (TALKTOME_AUDIO_SYSTEM: pulseaudio, pipewire, or alsa)
