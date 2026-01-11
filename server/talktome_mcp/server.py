@@ -136,7 +136,7 @@ async def initiate_call(message: str = "") -> Dict[str, Any]:
 
 @mcp.tool(
     name="continue_call",
-    description="Continue an active call with a follow-up message. Waits for and returns the user's response.",
+    description="Continue an active call with a follow-up message. Waits for and returns the user's response. ONLY use this when you need an answer from the user (e.g., asking a question, requesting a decision). For confirmations or status updates where you don't need a response, use the 'speak' tool instead.",
 )
 async def continue_call(message: str) -> Dict[str, Any]:
     """
@@ -166,7 +166,7 @@ async def continue_call(message: str) -> Dict[str, Any]:
 
 @mcp.tool(
     name="speak",
-    description="Convert text to speech and play it through the speakers without waiting for a response. Use this to acknowledge requests or provide status updates before starting time-consuming operations.",
+    description="Convert text to speech and play it through the speakers WITHOUT waiting for a response. Use this for confirmations, acknowledgments, or to indicate what you're about to do (e.g., 'Let me search for that...', 'Got it, I'll fix the bug now.'). This is NON-BLOCKING - use 'continue_call' instead when you need the user to respond.",
 )
 async def speak(text: str) -> Dict[str, Any]:
     """
